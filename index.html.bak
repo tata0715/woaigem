@@ -8664,7 +8664,6 @@
     height: 100%; /* 关键：让主屏幕撑满整个手机高度 */
     
     /* 恢复您设置的、完美的底部间距 */
-    padding-bottom: calc(40px + env(safe-area-inset-bottom));
     box-sizing: border-box;
 }
 
@@ -8749,7 +8748,7 @@
     right: 0;
     
     /* 关键：使用您设置的150px，将它从底部向上推开，形成您要的间距 */
-    margin-bottom: 10px; 
+    margin-bottom: 0px; 
     
     z-index: 10; /* 确保它在最上层 */
 }

@@ -8653,94 +8653,118 @@
 
         /* ▲▲▲ 新增CSS结束 ▲▲▲ */
 
-/* ▼▼▼ 【最终布局修复版】请用这一整块代码，替换所有旧的桌面分页CSS ▼▼▼ */
+		/* ▼▼▼ 【全新 | 终极滑动修复版】请用这整块代码替换所有旧的分页相关CSS ▼▼▼ */
 
-/* 1. 主屏幕布局调整，为分页做准备 */
+/* ▼▼▼ 【全新 | 终极滑动修复版】请用这整块代码替换所有旧的主屏幕和分页相关CSS ▼▼▼ */
+
+/* 1. 恢复主屏幕的Flex布局，这是实现固定头尾、中间自适应的关键 */
 #home-screen {
-    justify-content: flex-start; /* 确保内容从顶部开始排列 */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* 关键：让主屏幕撑满整个手机高度 */
+    
+    /* 恢复您设置的、完美的底部间距 */
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
 }
 
-/* 2. 分页的总容器 (这部分保持不变) */
-#desktop-pages-container {
-    display: flex;
-    width: 100%;
+/* 2. 固定顶部的个人资料卡和底部的Dock栏，确保它们不会滚动 */
+#profile-widget, #desktop-dock {
+    flex-shrink: 0; /* 防止被压缩 */
+    padding-left: 20px;
+    padding-right: 20px;
+}
+#profile-widget {
+    padding-top: calc(20px + env(safe-area-inset-top));
+}
+#desktop-dock {
+    margin: 0 auto; /* 保持水平居中 */
+}
+
+/* 3. 【核心修复】让中间内容区(#main-content-area)自动填满所有剩余的垂直空间 */
+#main-content-area {
+    flex-grow: 1; /* 关键：让它自动填充 profile-widget 和 desktop-dock 之间的所有空间 */
+    display: flex; /* 让它自己也成为一个Flex容器 */
+    min-height: 0; /* 关键：防止在Flex布局中被子元素意外撑开，这是高级技巧 */
+    margin-top: 30px; /* 这是您原来的设置，保持不变 */
+}
+
+/* 4. 让滑动容器的包装器(#desktop-swiper-wrapper)也填满 #main-content-area */
+#desktop-swiper-wrapper {
     flex-grow: 1;
+    position: relative; /* 关键：为分页小圆点提供绝对定位的锚点 */
+    display: flex;
+}
+
+/* 5. 【核心修复】让真正滑动的容器(#desktop-swiper)填满其包装器，并为其底部留出巨大内边距 */
+#desktop-swiper {
+    flex-grow: 1; /* 关键：现在这个容器变得非常高，充满了整个中间区域！ */
+    display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    margin-top: 20px;
+    scroll-behavior: smooth;
+    margin: 0 -20px;
+    
+    /* 关键：在滑动容器内部留出足够的空间给分页指示器，这个区域现在也是可滑动的了！ */
+    padding-bottom: 180px; /* (150px的间距 + 30px的小圆点区域) */
+    box-sizing: border-box;
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
-/* 隐藏滚动条 */
-#desktop-pages-container::-webkit-scrollbar { display: none; }
-#desktop-pages-container { -ms-overflow-style: none; scrollbar-width: none; }
+#desktop-swiper::-webkit-scrollbar {
+    display: none;
+}
 
-
-/* 3. 【核心修正】每一页的样式 */
+/* 6. 每一页的样式 (保持不变) */
 .desktop-page {
     width: 100%;
-    height: 100%;
-    flex-shrink: 0;
+    flex: 0 0 100%;
     scroll-snap-align: start;
-    
-    /* 关键：不再将自己作为Grid，而是作为Flex容器，目的是为了【居中】内部的 #desktop-layout */
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    box-sizing: border-box;
+    padding: 0 20px;
 }
 
-/* 4. 【核心修正】恢复 #desktop-layout 的原始布局 */
-/*    现在，由这个容器来负责您所喜爱的完美网格布局 */
-#desktop-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.1fr;
-    gap: 20px;
-    width: 100%; /* 宽度将自动适应父级的padding，保持居中 */
-    align-items: start;
-}
-
-/* 5. 第二页的布局 (这部分保持不变) */
-#desktop-page-2 {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 10px;
-}
+/* 7. 【位置修复】第二页App容器的布局 */
 #desktop-app-container-page2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 25px;
-    align-content: start;
-    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    
+    /* 核心修改：将这个值改小，图标就会向上移动。改为 0 会让它与第一页的小组件顶部大致对齐 */
+    padding-top: 0; 
 }
 
-/* 6. 页面指示器 (这部分保持不变) */
-#desktop-page-indicator {
+/* 8. 分页指示器 (小圆点) 的样式 */
+#desktop-pagination {
     display: flex;
     justify-content: center;
     gap: 8px;
-    margin-top: auto;
-    margin-bottom: 15px;
-    flex-shrink: 0;
+    padding: 10px 0;
+    
+    /* 关键：使用绝对定位，将它“钉”在滑动容器包装器的底部 */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+    /* 关键：使用您设置的150px，将它从底部向上推开，形成您要的间距 */
+    margin-bottom: 10px; 
+    
+    z-index: 10; /* 确保它在最上层 */
 }
-.indicator-dot {
+.pagination-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.4);
-    transition: background-color 0.3s;
+    background-color: rgba(255, 255, 255, 0.4); /* <-- 改成这样 */
+    transition: background-color 0.3s ease;
 }
-.indicator-dot.active {
-    background-color: rgba(255, 255, 255, 0.9);
+.pagination-dot.active {
+    background-color: #ffffff;
 }
-
-/* 7. 底部 Dock (这部分保持不变) */
-#desktop-dock {
-    margin-top: 0;
-    margin-bottom: 10px;
-}
-
-/* ▲▲▲ 替换结束 ▲▲▲ */
-
+/* ▲▲▲ CSS替换结束 ▲▲▲ */
+/* ▲▲▲ CSS替换结束 ▲▲▲ */
     </style>
 </head>
 <body>
@@ -8760,11 +8784,14 @@
                 <div class="message"></div>
             </div>
         </div>
-<!-- ▼▼▼ 请用这一整块新代码，完整替换旧的 <div id="home-screen"...>...</div> ▼▼▼ -->
+<!-- ▼▼▼ 步骤 1：用这整块新代码，完整替换掉您现有的 <div id="home-screen" ...> ... </div> ▼▼▼ -->
+
+<!-- ▼▼▼ 用下面这【一整块新代码】，完整替换掉您现有的 <div id="home-screen" ...> ... </div> ▼▼▼ -->
+
+<!-- ▼▼▼ 用下面这【一整块新代码】，再次完整替换掉您现有的 <div id="home-screen" ...> ... </div> ▼▼▼ -->
 
 <div id="home-screen" class="screen active">
-
-    <!-- 个人资料组件 (保持在最上方) -->
+    <!-- 顶部个人资料卡 (结构不变) -->
     <div id="profile-widget">
         <img id="profile-banner-img" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image">
         <div class="profile-avatar-container">
@@ -8781,62 +8808,66 @@
         </div>
     </div>
 
-    <!-- ▼▼▼ 桌面分页容器 (全新) ▼▼▼ -->
-    <div id="desktop-pages-container">
-        <!-- 桌面第一页 -->
-        <div class="desktop-page" id="desktop-page-1">
-            <div id="desktop-layout">
-                <!-- 左侧小组件列 -->
-                <div id="desktop-widget-column">
-                    <div class="desktop-widget text-only">
-                        <p id="widget-text-1" class="editable-text">Be fearless in pursuit of happiness</p>
-                    </div>
-                    <div class="desktop-widget icon-left">
-                        <img id="widget-avatar-1" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image">
-                        <span id="widget-text-2" class="editable-text">Dare to be different</span>
-                    </div>
-                    <div class="desktop-widget icon-right">
-                        <span id="widget-text-3" class="editable-text">* Keep your spirit free</span>
-                        <img id="widget-avatar-2" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image">
+    <!-- 中间内容区 (恢复您原来的结构) -->
+    <div id="main-content-area">
+        <!-- 【核心修改】将滑动容器和分页指示器包裹在这里 -->
+        <div id="desktop-swiper-wrapper">
+            <div id="desktop-swiper">
+                <!-- 页面 1: 您原有的 App 和小组件 -->
+                <div class="desktop-page" id="desktop-page-1">
+                    <div id="desktop-layout">
+                        <div id="desktop-widget-column">
+                            <div class="desktop-widget text-only">
+                                <p id="widget-text-1" class="editable-text">Be fearless in pursuit of happiness</p>
+                            </div>
+                            <div class="desktop-widget icon-left">
+                                <img id="widget-avatar-1" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image">
+                                <span id="widget-text-2" class="editable-text">Dare to be different</span>
+                            </div>
+                            <div class="desktop-widget icon-right">
+                                <span id="widget-text-3" class="editable-text">* Keep your spirit free</span>
+                                <img id="widget-avatar-2" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image">
+                            </div>
+                        </div>
+                        <div id="desktop-app-container">
+                            <div class="desktop-app-icon" onclick="showScreen('chat-list-screen')">
+                                <div class="icon-bg-desktop"><img id="icon-img-qq" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="QQ"></div>
+                                <span class="label">QQ</span>
+                            </div>
+                            <div class="desktop-app-icon" onclick="showScreen('world-book-screen')">
+                                <div class="icon-bg-desktop"><img id="icon-img-world-book" src="https://i.postimg.cc/HWf1JKzn/IMG-6435.jpg" alt="世界书"></div>
+                                <span class="label">世界书</span>
+                            </div>
+                            <div class="desktop-app-icon" onclick="showScreen('wallpaper-screen')">
+                                <div class="icon-bg-desktop"><img id="icon-img-wallpaper" src="https://i.postimg.cc/T1j03pQr/IMG-6440.jpg" alt="外观设置"></div>
+                                <span class="label">外观设置</span>
+                            </div>
+                            <div class="desktop-app-icon" onclick="openRenderingRulesScreen()">
+                                <div class="icon-bg-desktop"><img id="icon-img-renderer" src="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1756312261242_qdqqd_g0eriz.jpeg" alt="渲染器"></div>
+                                <span class="label">渲染器</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <!-- 右侧App图标容器 -->
-                <div id="desktop-app-container">
-                    <div class="desktop-app-icon" onclick="showScreen('chat-list-screen')">
-                        <div class="icon-bg-desktop"><img id="icon-img-qq" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="QQ"></div>
-                        <span class="label">QQ</span>
-                    </div>
-                    <div class="desktop-app-icon" onclick="showScreen('world-book-screen')">
-                        <div class="icon-bg-desktop"><img id="icon-img-world-book" src="https://i.postimg.cc/HWf1JKzn/IMG-6435.jpg" alt="世界书"></div>
-                        <span class="label">世界书</span>
-                    </div>
-                    <div class="desktop-app-icon" onclick="showScreen('wallpaper-screen')">
-                        <div class="icon-bg-desktop"><img id="icon-img-wallpaper" src="https://i.postimg.cc/T1j03pQr/IMG-6440.jpg" alt="外观设置"></div>
-                        <span class="label">外观设置</span>
-                    </div>
-                    <div class="desktop-app-icon" onclick="openRenderingRulesScreen()">
-                        <div class="icon-bg-desktop"><img id="icon-img-renderer" src="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1756312261242_qdqqd_g0eriz.jpeg" alt="渲染器"></div>
-                        <span class="label">渲染器</span>
+                <!-- 页面 2: 新的 "X" App -->
+                <div class="desktop-page" id="desktop-page-2">
+                    <div id="desktop-app-container-page2">
+                        <div class="desktop-app-icon" onclick="showScreen('x-social-screen')">
+                            <div class="icon-bg-desktop"><img id="icon-img-x" src="https://i.postimg.cc/Y05pS1z2/x-logo.png" alt="X"></div>
+                            <span class="label">X</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- 桌面第二页 -->
-        <div class="desktop-page" id="desktop-page-2">
-            <div id="desktop-app-container-page2">
-                 <div class="desktop-app-icon" onclick="showScreen('x-social-screen')">
-                    <div class="icon-bg-desktop"><img src="https://i.postimg.cc/W34x01x1/IMG-7480.jpg" alt="X"></div>
-                    <span class="label">X</span>
-                </div>
+            <!-- 分页指示器 (小圆点) -->
+            <div id="desktop-pagination">
+                <span class="pagination-dot active"></span>
+                <span class="pagination-dot"></span>
             </div>
         </div>
     </div>
-    <!-- ▲▲▲ 分页容器结束 ▲▲▲ -->
-    
-    <!-- 页面指示器 (小圆点) -->
-    <div id="desktop-page-indicator"></div>
 
-    <!-- 底部 Dock 应用 (保持在最外层) -->
+    <!-- 底部 Dock 栏 (结构不变) -->
     <div id="desktop-dock">
         <div class="desktop-app-icon" onclick="showScreen('api-settings-screen')">
             <div class="icon-bg-desktop"><img id="icon-img-api-settings" src="https://i.postimg.cc/MK8rJ8t7/IMG-6438.jpg" alt="API设置"></div>
@@ -8853,14 +8884,13 @@
         <div class="desktop-app-icon" onclick="showScreen('douban-screen')">
             <div class="icon-bg-desktop"><img id="icon-img-douban" src="https://i.postimg.cc/Pq2xJN1g/IMG-7301.jpg" alt="豆瓣"></div>
             <span class="label">豆瓣</span>
-        </div>
+        </div>    
     </div>
 </div>
 
 
 
-<!-- ▲▲▲ HTML 替换/新增结束 ▲▲▲ -->
-
+<!-- ▲▲▲ 替换结束 ▲▲▲ -->
 <!-- ▼▼▼ 【全新】角色手机功能的所有HTML屏幕 ▼▼▼ -->
 
 <!-- 1. 角色选择屏幕 -->
@@ -31971,6 +32001,29 @@ async function importLayoutFile(file) {
     }
 }
 
+
+// ▼▼▼ 【全新】这是为桌面分页功能添加的【全部JS】，请粘贴到 init() 函数的前面 ▼▼▼
+
+function initializeDesktopSwiper() {
+    const swiper = document.getElementById('desktop-swiper');
+    const dots = document.querySelectorAll('.pagination-dot');
+
+    if (!swiper || dots.length === 0) return;
+
+    // 监听滚动事件来更新小圆点
+    swiper.addEventListener('scroll', () => {
+        const pageWidth = swiper.offsetWidth;
+        // 使用 Math.round 来精确计算当前在哪一页
+        const currentPage = Math.round(swiper.scrollLeft / pageWidth);
+        
+        // 更新所有小圆点的 'active' 状态
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentPage);
+        });
+    });
+}
+
+// ▲▲▲ 新JS粘贴结束 ▲▲▲
               // ===================================================================
                 // 4. 初始化函数 init()
                 // ===================================================================
@@ -32233,50 +32286,6 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
                     // ==========================================================
                     // --- 各种事件监听器 ---
                     // ==========================================================
-
-					// ▼▼▼ 【全新】这是桌面分页指示器功能的【全部核心JS代码】，请完整粘贴 ▼▼▼
-
-/**
- * 【全新】更新桌面分页指示器（小圆点）
- */
-function updateDesktopPageIndicator() {
-    const pagesContainer = document.getElementById('desktop-pages-container');
-    const indicatorContainer = document.getElementById('desktop-page-indicator');
-    if (!pagesContainer || !indicatorContainer) return;
-
-    const pageCount = pagesContainer.querySelectorAll('.desktop-page').length;
-    // 根据当前滚动位置计算出在哪一页
-    const currentPage = Math.round(pagesContainer.scrollLeft / pagesContainer.clientWidth);
-    
-    indicatorContainer.innerHTML = ''; // 清空旧的圆点
-    
-    // 根据页面数量，动态创建圆点
-    for (let i = 0; i < pageCount; i++) {
-        const dot = document.createElement('span');
-        dot.className = 'indicator-dot';
-        if (i === currentPage) {
-            dot.classList.add('active'); // 给当前页的圆点添加高亮
-        }
-        indicatorContainer.appendChild(dot);
-    }
-}
-
-// 首次加载时，立即更新一次指示器
-updateDesktopPageIndicator();
-
-// 为分页容器绑定滚动事件，每次滚动时都更新指示器
-document.getElementById('desktop-pages-container').addEventListener('scroll', updateDesktopPageIndicator);
-
-
-/**
- * 【全新】X 社交屏幕的渲染函数（目前是空的，为未来功能预留）
- */
-function renderXSocialScreen() {
-    console.log("渲染 X 社交页面");
-}
-window.renderXSocialScreenProxy = renderXSocialScreen;
-
-// ▲▲▲ 新增JS代码结束 ▲▲▲
 		
         // ▼▼▼ 在 init() 的事件监听器区域，添加这行新代码 ▼▼▼
         document.getElementById('rules-tabs').addEventListener('click', (e) => {
@@ -36395,7 +36404,7 @@ document.getElementById('import-world-book-input').addEventListener('change', (e
         });
 
 
-
+initializeDesktopSwiper(); // 调用新函数来初始化滑动功能
 
                     showScreen('home-screen');
                 }

@@ -27,6 +27,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/gh/phoebeboo/mewoooo@main/pp.js" defer></script>
     <style>
         @font-face { font-family: 'bulangni'; src: url('') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
         :root { --screen-width: 350px; --screen-height: 650px; --secondary-bg: #ffffff; --border-color: #e0e0e0; --text-primary: #1f1f1f; --text-secondary: #8a8a8a; --accent-color: #007bff; }
@@ -8689,7 +8690,7 @@
                 <p id="profile-bio" class="editable-text">你好像过得很好 迫不及待的抹去我存在的痕迹</p>
                 <p id="profile-location">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path></svg>
-                    <span id="profile-lcation-text" class="editable-text">北海道</span>
+                    <span id="profile-location-text" class="editable-text">北海道</span>
                 </p>
             </div>
         </div>
@@ -8732,6 +8733,108 @@
             </div>
         </div>
     </div>
+
+<!-- 悬浮X Logo - 只在主页面显示 -->
+      <div id="floating-x-logo" class="floating-x-hidden">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+          <path
+            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      </div>
+
+      <!-- 悬浮X Logo的样式和脚本 -->
+      <style>
+        /* 悬浮X Logo样式 */
+        #floating-x-logo {
+          position: fixed;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #1d9bf0 0%, #0ea5ff 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          cursor: pointer;
+          box-shadow: 0 4px 20px rgba(29, 155, 240, 0.3);
+          z-index: 999;
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .floating-x-hidden {
+          transform: translateY(-50%) translateX(100px);
+          opacity: 0;
+        }
+
+        .floating-x-visible {
+          transform: translateY(-50%) translateX(0);
+          opacity: 1;
+        }
+
+        #floating-x-logo:hover {
+          transform: translateY(-50%) scale(1.1);
+          box-shadow: 0 6px 25px rgba(29, 155, 240, 0.4);
+        }
+
+        #floating-x-logo:active {
+          transform: translateY(-50%) scale(0.95);
+        }
+      </style>
+
+      <script>
+        // 双击检测变量
+        let homeScreenTapCount = 0;
+        let homeScreenTapTimer = null;
+
+        // 为home-screen添加双击事件监听
+        document.addEventListener('DOMContentLoaded', function () {
+          const homeScreen = document.getElementById('home-screen');
+          const floatingXLogo = document.getElementById('floating-x-logo');
+
+          if (homeScreen && floatingXLogo) {
+            // 双击事件监听
+            homeScreen.addEventListener('click', function (e) {
+              // 避免与其他元素的点击事件冲突
+              if (e.target.closest('.desktop-app-icon') || e.target.closest('#floating-x-logo')) {
+                return;
+              }
+
+              homeScreenTapCount++;
+
+              if (homeScreenTapCount === 1) {
+                homeScreenTapTimer = setTimeout(function () {
+                  homeScreenTapCount = 0;
+                }, 300);
+              } else if (homeScreenTapCount === 2) {
+                clearTimeout(homeScreenTapTimer);
+                homeScreenTapCount = 0;
+
+                // 显示悬浮X Logo
+                floatingXLogo.classList.remove('floating-x-hidden');
+                floatingXLogo.classList.add('floating-x-visible');
+
+                // 3秒后自动隐藏
+                setTimeout(function () {
+                  floatingXLogo.classList.remove('floating-x-visible');
+                  floatingXLogo.classList.add('floating-x-hidden');
+                }, 3000);
+              }
+            });
+
+            // X Logo点击事件
+            floatingXLogo.addEventListener('click', function (e) {
+              e.stopPropagation();
+              showScreen('x-social-screen');
+              // 点击后隐藏logo
+              floatingXLogo.classList.remove('floating-x-visible');
+              floatingXLogo.classList.add('floating-x-hidden');
+            });
+          }
+        });
+      </script>
 
     <!-- 底部 Dock 应用 -->
     <div id="desktop-dock">
@@ -9781,6 +9884,23 @@
                 </div>
 
                 <!-- EPhone 图标设置 -->
+				<!-- ▼▼▼ 在这里粘贴下面的新代码 ▼▼▼ -->
+<hr style="width: 80%; opacity: 0.3; margin: 30px 0;">
+<h3 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; width:100%; text-align: left;">屏幕布局管理</h3>
+<div class="form-group" style="width:100%;">
+    <label for="layout-preset-select">选择、切换或新建预设</label>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <select id="layout-preset-select" style="flex-grow: 1;"></select>
+        <button id="save-layout-preset-btn" class="form-button-secondary" style="margin-top: 0; padding: 12px;">保存</button>
+        <button id="delete-layout-preset-btn" class="form-button-secondary" style="margin-top: 0; padding: 12px; background-color: #ffebee; color: #d32f2f; border-color: #ffcdd2;">删除</button>
+    </div>
+</div>
+<div class="form-group" style="width:100%; display: flex; gap: 10px; justify-content: center;">
+    <button class="form-button form-button-secondary" id="import-layout-btn" style="margin-top: 10px; flex-grow: 1;">导入布局 (JSON)</button>
+    <input type="file" id="import-layout-input" accept="application/json" hidden>
+    <button class="form-button form-button-secondary" id="export-layout-btn" style="margin-top: 10px; background-color: #e8f5e9; color: #2e7d32; flex-grow: 1;">导出当前布局</button>
+</div>
+<!-- ▲▲▲ 粘贴结束 ▲▲▲ -->
                 <hr style="width: 80%; opacity: 0.3; margin: 30px 0;">
                 <div style="width:100%; text-align: left; margin-bottom: 15px;">
                     <label style="font-weight: 500; color: var(--text-secondary);">EPhone App 图标设置</label>
@@ -9810,19 +9930,7 @@
                     </label>
                     <textarea id="global-css-input" rows="6" style="width: 100%; margin-top: 8px; font-family: monospace; font-size: 16px; resize: vertical;" placeholder="/* 在此输入自定义CSS */"></textarea>
                 </div>
-<!-- ▼▼▼ 在这里粘贴下面的新代码 ▼▼▼ -->
-
-<!-- ▼▼▼ 【V2.0 | 已添加导出功能】请用这整块代码，替换旧的导入按钮 ▼▼▼ -->
-
-<button class="form-button form-button-secondary" id="import-appearance-btn" style="margin-top: 10px;">导入外观 (JSON)</button>
-<input type="file" id="import-appearance-input" accept="application/json" hidden>
-
-<!-- 【【【核心新增：导出外观按钮】】】 -->
-<button class="form-button form-button-secondary" id="export-appearance-btn" style="margin-top: 10px; background-color: #e8f5e9; color: #2e7d32;">导出外观 (JSON)</button>
-
-<!-- ▲▲▲ 替换结束 ▲▲▲ -->
-
-<!-- ▲▲▲ 粘贴结束 ▲▲▲ -->                
+              
                 <!-- 保存按钮 -->
                 <button class="form-button" id="save-wallpaper-btn" style="margin-top: 30px;">保存所有外观设置</button>
             </div>
@@ -12207,30 +12315,68 @@ const DEFAULT_NOTIFICATION_SOUND = 'https://www.myinstants.com/media/sounds/noti
             });
         });
         // ▲▲▲ 替换结束 ▲▲▲
+
+		window.db = db;
         
                 // ===================================================================
                 // 3. 所有功能函数定义
                 // ===================================================================
         
-                function showScreen(screenId) {
-                    if (screenId === 'chat-list-screen') {
-                        window.renderChatListProxy(); 
-                        switchToChatListView('messages-view');
-                    }
-                    if (screenId === 'api-settings-screen') window.renderApiSettingsProxy();
-                    if (screenId === 'wallpaper-screen') window.renderWallpaperScreenProxy();
-                    if (screenId === 'world-book-screen') window.renderWorldBookScreenProxy();
-                     if (screenId === 'douban-screen') renderDoubanScreen();
-                    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                    const screenToShow = document.getElementById(screenId);
-                    if (screenToShow) screenToShow.classList.add('active');
-                    if (screenId === 'chat-interface-screen') window.updateListenTogetherIconProxy(state.activeChatId);
-                    if (screenId === 'font-settings-screen') {
-            loadFontPresetsDropdown(); // <-- 新增这一行
-                        document.getElementById('font-url-input').value = state.globalSettings.fontUrl || '';
-                        applyCustomFont(state.globalSettings.fontUrl || '', true);
-                    }
-                }
+                /**
+ * 【全新 V2.0 | 逻辑分离版】切换并准备指定屏幕
+ * @param {string} screenId - 要显示的屏幕ID
+ */
+function showScreen(screenId) {
+    // --- 屏幕切换的核心逻辑（保持不变）---
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const screenToShow = document.getElementById(screenId);
+    if (screenToShow) screenToShow.classList.add('active');
+
+    // --- 【【【核心修复就在这里！】】】 ---
+    // 我们在这里为不同的屏幕，执行它们专属的“准备工作”
+
+    if (screenId === 'chat-list-screen') {
+        window.renderChatListProxy(); 
+        switchToChatListView('messages-view');
+    }
+    
+    if (screenId === 'api-settings-screen') {
+        window.renderApiSettingsProxy();
+    }
+    
+    if (screenId === 'world-book-screen') {
+        window.renderWorldBookScreenProxy();
+    }
+
+    if (screenId === 'douban-screen') {
+        renderDoubanScreen();
+    }
+
+	if (screenId === 'x-social-screen') {
+		window.renderXSocialScreenProxy();
+	}
+    
+    if (screenId === 'chat-interface-screen') {
+        window.updateListenTogetherIconProxy(state.activeChatId);
+    }
+    
+    if (screenId === 'wallpaper-screen') {
+        // 当打开“外观设置”时，加载所有预设下拉框，并刷新预览
+        loadLayoutPresetsDropdown();
+        loadCssPresetsDropdown();
+        // 如果你有字体预设，也在这里加载
+        // loadFontPresetsDropdown(); 
+        
+        // 最后再刷新一次UI
+        window.renderWallpaperScreenProxy();
+    }
+    
+    if (screenId === 'font-settings-screen') {
+        loadFontPresetsDropdown(); 
+        document.getElementById('font-url-input').value = state.globalSettings.fontUrl || '';
+        applyCustomFont(state.globalSettings.fontUrl, true);
+    }
+}
                 window.updateListenTogetherIconProxy = () => {};
         
                 function switchToChatListView(viewId) {
@@ -12292,6 +12438,13 @@ const DEFAULT_NOTIFICATION_SOUND = 'https://www.myinstants.com/media/sounds/noti
                             break;
                     }
                 }
+
+				// X社交页面渲染函数
+     			function renderXSocialScreen() {
+       				// 暂时为空，后续添加X社交页面的渲染逻辑
+       				console.log("渲染X社交页面");
+     			}
+     			window.renderXSocialScreenProxy = renderXSocialScreen;
                 
                 function renderQzoneScreen() {
                     if (state && state.qzoneSettings) {
@@ -14425,7 +14578,8 @@ async function loadAllDataFromDB() {
         
 // ▼▼▼ 【请用这个已更新的版本】替换旧的 renderWallpaperScreen 函数 ▼▼▼
         function renderWallpaperScreen() { 
-            loadCssPresetsDropdown();
+			//loadLayoutPresetsDropdown(); // 新增这一行
+            //loadCssPresetsDropdown();
             
             // EPhone 壁纸预览
             const preview = document.getElementById('wallpaper-preview'); 
@@ -31531,121 +31685,9 @@ document.getElementById('douban-cast-list').addEventListener('click', (e) => {
     }
 });
 // ▲▲▲ 新增事件绑定结束 ▲▲▲
-/* ▼▼▼ 【全新】这是导入外观设置的【全部核心JS代码】，请完整粘贴 ▼▼▼ */
-// ▼▼▼ 【全新V2.0 | 精确导出版】请用这个新函数，完整替换旧的 exportAppearanceSettings ▼▼▼
 
-/**
- * 【全新】将当前所有【外观相关】的设置打包并导出为一个JSON文件
- */
-async function exportAppearanceSettings() {
-    try {
-        // 1. 创建一个基础备份对象，并手动、逐一添加需要导出的外观设置
-        const appearanceData = {
-            type: 'EPhoneAppearanceBackup', // 文件类型标记，用于导入时验证
-            version: 1,
 
-            // --- 壁纸与背景 ---
-            wallpaper: state.globalSettings.wallpaper || 'linear-gradient(135deg, #89f7fe, #66a6ff)',
-            cphoneWallpaper: state.globalSettings.cphoneWallpaper || 'linear-gradient(135deg, #f6d365, #fda085)',
-            globalChatBackground: state.globalSettings.globalChatBackground || '',
 
-            // --- App 图标 ---
-            appIcons: state.globalSettings.appIcons || { ...DEFAULT_APP_ICONS },
-            cphoneAppIcons: state.globalSettings.cphoneAppIcons || { ...DEFAULT_CPHONE_ICONS },
-
-            // --- 主屏幕小组件 ---
-            widgetData: state.globalSettings.widgetData || {},
-
-            // --- 字体与样式 ---
-            fontUrl: state.globalSettings.fontUrl || '',
-            globalCss: state.globalSettings.globalCss || '',
-
-            // --- 其他外观项 ---
-            notificationSoundUrl: state.globalSettings.notificationSoundUrl || '',
-            showStatusBar: state.globalSettings.showStatusBar || false,
-        };
-
-        // 2. 将数据对象转换为格式化的JSON字符串
-        const jsonString = JSON.stringify(appearanceData, null, 2);
-        
-        // 3. 创建Blob对象并触发下载 (这部分逻辑不变)
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `EPhone-Appearance-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-        
-        // 4. 给出成功提示
-        await showCustomAlert('导出成功', '所有外观设置已成功导出！');
-
-    } catch (error) {
-        // 5. 错误处理
-        console.error("导出外观设置时出错:", error);
-        await showCustomAlert('导出失败', `发生了一个错误: ${error.message}`);
-    }
-}
-
-// ▲▲▲ 替换结束 ▲▲▲```
-
-/**
- * 【总入口】当用户选择了外观设置的JSON文件后，由此函数开始处理
- * @param {File} file - 用户选择的 .json 备份文件
- */
-async function importAppearanceSettings(file) {
-    if (!file) return;
-
-    // 1. 弹出确认框，防止用户误操作
-    const confirmed = await showCustomConfirm(
-        '导入外观设置',
-        '这将用文件中的设置覆盖当前的所有外观设置（包括壁纸、图标、字体、CSS等）。确定要继续吗？',
-        { confirmText: '确认导入' }
-    );
-
-    if (!confirmed) return;
-
-    try {
-        // 2. 读取并解析JSON文件
-        const text = await file.text();
-        const data = JSON.parse(text);
-
-        // 3. 验证文件有效性（检查是否包含关键的外观设置字段）
-        if (!data.wallpaper && !data.globalCss && !data.appIcons) {
-            throw new Error("文件格式不正确，缺少关键的外观设置项。");
-        }
-
-        // 4. 将导入的设置合并到当前的全局设置中
-        //    我们使用Object.assign来确保即使未来增加了新的设置项，旧的备份文件也不会导致它们丢失
-        Object.assign(state.globalSettings, data);
-
-        // 5. 将更新后的完整设置保存到数据库
-        await db.globalSettings.put(state.globalSettings);
-        
-        // 6. 立即应用所有新设置，让更改即时生效
-        applyGlobalWallpaper();
-        applyCPhoneWallpaper();
-        applyAppIcons();
-        applyCPhoneAppIcons();
-        applyGlobalCss(state.globalSettings.globalCss);
-        applyCustomFont(state.globalSettings.fontUrl);
-        applyStatusBarVisibility();
-        applyWidgetData();
-
-        // 7. 重新渲染外观设置页面，以显示最新的设置值
-        renderWallpaperScreen();
-        
-        // 8. 给出成功提示
-        await showCustomAlert('导入成功', '外观设置已成功导入并应用！');
-
-    } catch (error) {
-        // 如果过程中出现任何错误，则捕获并提示用户
-        console.error("导入外观设置时出错:", error);
-        await showCustomAlert('导入失败', `文件解析或应用失败: ${error.message}`);
-    }
-}
-
-/* ▲▲▲ 核心JS代码粘贴结束 ▲▲▲ */
 // ===================================================================
 // ▼▼▼ 【全新】后台活动模拟功能的核心代码 ▼▼▼
 // ===================================================================
@@ -31699,6 +31741,236 @@ async function simulateBackgroundActivity(minutesOffline) {
 }
 // ▲▲▲ 【全新】后台活动模拟功能的核心代码结束 ▲▲▲
 
+
+
+/* ▼▼▼ 【全新】屏幕布局预设功能核心代码 ▼▼▼ */
+
+/**
+ * 【全新 V3.0 | 状态无关版】从数据库加载屏幕布局预设，并填充到下拉选择框中
+ * (此函数只负责渲染，不再处理选中状态)
+ */
+async function loadLayoutPresetsDropdown() {
+    const selectEl = document.getElementById('layout-preset-select');
+    // 核心修复1：每次加载前，彻底清空旧的选项，只保留“未保存”这一项
+    selectEl.innerHTML = '<option value="">-- 当前布局 (未保存) --</option>'; 
+    
+    const presets = await db.appearancePresets.where('type').equals('screen_layout').toArray();
+    
+    presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        selectEl.appendChild(option);
+    });
+}
+
+/**
+ * 【全新】当用户从下拉框选择一个布局预设时，加载并应用该预设
+ */
+async function handleLayoutPresetSelectionChange() {
+    const selectEl = document.getElementById('layout-preset-select');
+    const selectedId = parseInt(selectEl.value);
+    
+    if (isNaN(selectedId)) {
+        // 如果选择的是“未保存”选项，则不做任何事
+        return;
+    }
+
+    const preset = await db.appearancePresets.get(selectedId);
+    if (preset && preset.value) {
+        // 直接调用我们现有的导入逻辑，将预设数据应用到全局状态
+        await applyAppearanceData(preset.value);
+        alert(`已成功加载并应用布局预设 “${preset.name}”！`);
+    }
+}
+
+/**
+ * 【全新】将当前的屏幕布局设置保存为一个新的预设或覆盖现有预设
+ */
+async function saveLayoutPreset() {
+    const selectEl = document.getElementById('layout-preset-select');
+    const selectedId = parseInt(selectEl.value);
+    
+    // 1. 提取所有与布局相关的当前设置
+    const layoutData = extractCurrentAppearanceData();
+
+    if (!isNaN(selectedId)) {
+        // --- 覆盖逻辑 ---
+        const existingPreset = await db.appearancePresets.get(selectedId);
+        if (existingPreset) {
+            const confirmed = await showCustomConfirm(
+                '覆盖预设', 
+                `你正在编辑预设 “${existingPreset.name}”。要用当前屏幕布局覆盖它吗？`, 
+                { confirmButtonClass: 'btn-danger', confirmText: '确认覆盖' }
+            );
+            if (confirmed) {
+                await db.appearancePresets.update(selectedId, { value: layoutData });
+                await loadLayoutPresetsDropdown();
+                selectEl.value = selectedId;
+                alert('屏幕布局预设已成功覆盖！');
+            }
+        }
+    } else {
+        // --- 新建逻辑 ---
+        const name = await showCustomPrompt('保存新布局预设', '请输入新预设的名称');
+        if (!name || !name.trim()) return;
+
+        const existingByName = await db.appearancePresets.where({ name: name.trim(), type: 'screen_layout' }).first();
+        if (existingByName) {
+            alert(`错误：名为 “${name.trim()}” 的预设已存在！`);
+            return;
+        }
+
+        const newPresetId = await db.appearancePresets.add({
+            name: name.trim(),
+            type: 'screen_layout',
+            value: layoutData
+        });
+        
+        await loadLayoutPresetsDropdown();
+        selectEl.value = newPresetId;
+        alert('新屏幕布局预设已保存！');
+    }
+}
+
+/**
+ * 【全新】删除当前选中的布局预设
+ */
+async function deleteLayoutPreset() {
+    const selectEl = document.getElementById('layout-preset-select');
+    const selectedId = parseInt(selectEl.value);
+
+    if (isNaN(selectedId)) {
+        alert('请先从下拉框中选择一个要删除的预设。');
+        return;
+    }
+
+    const preset = await db.appearancePresets.get(selectedId);
+    if (!preset) return;
+
+    const confirmed = await showCustomConfirm('删除预设', `确定要删除预设 “${preset.name}” 吗？`, { confirmButtonClass: 'btn-danger' });
+    if (confirmed) {
+        await db.appearancePresets.delete(selectedId);
+        await loadLayoutPresetsDropdown();
+        alert('预设已删除。');
+    }
+}
+
+/* ▼▼▼ 【全新】这是实现智能导入命名的核心辅助函数 ▼▼▼ */
+
+/**
+ * 【辅助函数】检查预设名称是否已存在，如果存在则返回一个带数字后缀的唯一名称
+ * @param {string} baseName - 想要使用的基础名称
+ * @param {string} type - 预设的类型 (e.g., 'screen_layout')
+ * @returns {Promise<string>} - 返回一个在数据库中保证唯一的名称
+ */
+async function getUniquePresetName(baseName, type) {
+    // 1. 先检查原始名称是否可用
+    const existing = await db.appearancePresets.where({ name: baseName, type: type }).first();
+    if (!existing) {
+        return baseName; // 如果不存在，直接返回原始名称
+    }
+
+    // 2. 如果原始名称已存在，开始尝试添加数字后缀
+    let count = 1;
+    let newName;
+    while (true) {
+        newName = `${baseName} (${count})`;
+        const existingWithCount = await db.appearancePresets.where({ name: newName, type: type }).first();
+        if (!existingWithCount) {
+            return newName; // 找到了一个可用的带后缀的名称，返回它
+        }
+        count++; // 如果还存在，继续增加数字尝试
+    }
+}
+/* ▲▲▲ 新增函数粘贴结束 ▲▲▲ */
+
+
+/**
+ * 【全新 | 辅助函数】提取所有与外观/布局相关的当前设置
+ * @returns {object} - 包含所有外观设置的数据对象
+ */
+function extractCurrentAppearanceData() {
+    return {
+        // --- 壁纸与背景 ---
+        wallpaper: state.globalSettings.wallpaper,
+        cphoneWallpaper: state.globalSettings.cphoneWallpaper,
+        globalChatBackground: state.globalSettings.globalChatBackground,
+        // --- App 图标 ---
+        appIcons: state.globalSettings.appIcons,
+        cphoneAppIcons: state.globalSettings.cphoneAppIcons,
+        // --- 主屏幕小组件 ---
+        widgetData: state.globalSettings.widgetData,
+    };
+}
+
+/**
+ * 【全新 | 核心应用函数】将传入的外观数据应用到全局状态并刷新UI
+ * @param {object} data - 包含外观设置的数据对象
+ */
+async function applyAppearanceData(data) {
+    // 1. 将导入的设置合并到当前的全局设置中
+    Object.assign(state.globalSettings, data);
+    
+    // 2. 将更新后的完整设置保存到数据库
+    await db.globalSettings.put(state.globalSettings);
+    
+    // 3. 立即应用所有新设置，让更改即时生效
+    applyGlobalWallpaper();
+    applyCPhoneWallpaper();
+    applyAppIcons();
+    applyCPhoneAppIcons();
+    applyWidgetData();
+    
+    // 4. 重新渲染外观设置页面，以显示最新的设置值
+    renderWallpaperScreen();
+}
+
+/**
+ * 【全新 V2.1 | 终极修复版】处理用户选择的布局文件，将其作为新预设导入并正确选中
+ * @param {File} file - 用户选择的 .json 文件
+ */
+async function importLayoutFile(file) {
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (data.type !== 'EPhoneAppearanceBackup' && !data.appIcons) {
+            throw new Error("文件格式不正确，这不是一个有效的外观/布局备份文件。");
+        }
+        
+        const presetBaseName = data.name || file.name.replace(/\.json$/i, '');
+        const uniquePresetName = await getUniquePresetName(presetBaseName, 'screen_layout');
+
+        const newPresetData = {
+            name: uniquePresetName,
+            type: 'screen_layout',
+            value: data 
+        };
+        delete newPresetData.value.type; 
+        
+        // 1. 将新预设存入数据库，并获取它唯一的ID
+        const newPresetId = await db.appearancePresets.add(newPresetData);
+
+        // 2. 应用这个新导入的布局 (这会触发UI刷新)
+        await applyAppearanceData(data);
+        
+        // 3. 刷新下拉框列表
+        await loadLayoutPresetsDropdown();
+
+        // 4. 【【【这就是解决问题的关键！】】】
+        //    在所有UI刷新完成后，我们强制将下拉框的值设置为刚刚创建的新预设的ID！
+        document.getElementById('layout-preset-select').value = newPresetId;
+
+        await showCustomAlert('导入成功！', `新的布局预设 “${uniquePresetName}” 已成功导入并应用！`);
+
+    } catch (error) {
+        console.error("导入布局时出错:", error);
+        await showCustomAlert('导入失败', `文件解析或应用失败: ${error.message}`);
+    }
+}
 
               // ===================================================================
                 // 4. 初始化函数 init()
@@ -31962,6 +32234,7 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
                     // ==========================================================
                     // --- 各种事件监听器 ---
                     // ==========================================================
+		
         // ▼▼▼ 在 init() 的事件监听器区域，添加这行新代码 ▼▼▼
         document.getElementById('rules-tabs').addEventListener('click', (e) => {
             if (e.target.classList.contains('rules-tab')) {
@@ -31977,6 +32250,67 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
         });
         document.getElementById('save-rule-btn').addEventListener('click', saveRenderingRule);
         // ▲▲▲ 新代码粘贴结束 ▲▲▲
+
+		// ▼▼▼ 【全新】屏幕布局管理事件监听器 ▼▼▼
+document.getElementById('layout-preset-select').addEventListener('change', handleLayoutPresetSelectionChange);
+document.getElementById('save-layout-preset-btn').addEventListener('click', saveLayoutPreset);
+document.getElementById('delete-layout-preset-btn').addEventListener('click', deleteLayoutPreset);
+
+// ▼▼▼ 【全新 V2.0 | 智能命名版】请用这整块代码替换旧的“导出布局”事件监听器 ▼▼▼
+document.getElementById('export-layout-btn').addEventListener('click', async () => {
+    const selectEl = document.getElementById('layout-preset-select');
+    const selectedId = parseInt(selectEl.value);
+    
+    let presetName;
+
+    // 1. 判断当前是否选中了一个已保存的预设
+    if (!isNaN(selectedId)) {
+        // 如果是，直接使用该预设的名称
+        presetName = selectEl.options[selectEl.selectedIndex].text;
+    } else {
+        // 如果否（即选择了“--当前布局--”），则弹窗让用户输入
+        const inputName = await showCustomPrompt(
+            "导出当前布局", 
+            "请为当前的屏幕布局命名以便导出："
+        );
+        if (!inputName || !inputName.trim()) {
+            // 如果用户取消或输入为空，则中止导出
+            return; 
+        }
+        presetName = inputName.trim();
+    }
+
+    // 2. 提取当前布局数据
+    const layoutData = extractCurrentAppearanceData();
+    // 添加文件类型标记
+    layoutData.type = 'EPhoneAppearanceBackup'; 
+    // 【核心修改】将用户确定的名字也存入JSON文件
+    layoutData.name = presetName;
+
+    // 3. 创建Blob并使用新名称触发下载
+    const blob = new Blob([JSON.stringify(layoutData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    // 使用我们确定的 presetName 来命名文件
+    link.download = `${presetName}-EPhone-Layout.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+});
+// ▲▲▲ 替换结束 ▲▲▲
+
+// “导入布局”按钮
+document.getElementById('import-layout-btn').addEventListener('click', () => {
+    document.getElementById('import-layout-input').click();
+});
+document.getElementById('import-layout-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        importLayoutFile(file);
+    }
+    e.target.value = null; 
+});
+// ▲▲▲ 新增事件绑定结束 ▲▲▲
         
         // ▼▼▼ 【全新】为单聊“拍一拍”按钮绑定事件 ▼▼▼
         document.getElementById('pat-btn').addEventListener('click', () => {
@@ -31988,8 +32322,7 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
             }
         });
         // ▲▲▲ 新增代码结束 ▲▲▲
-		// 在 init() 函数的事件监听器区域添加
-document.getElementById('export-appearance-btn').addEventListener('click', exportAppearanceSettings);
+
         // ▼▼▼ 【这是您缺失的核心功能代码，请粘贴在这里】 ▼▼▼
         let activeAnnouncementId = null; // 用于暂存正在操作的公告ID
         
@@ -35940,17 +36273,7 @@ document.getElementById('douban-wait-reply-btn').addEventListener('click', handl
                 }
             }
         });
-document.getElementById('import-appearance-btn').addEventListener('click', () => {
-    document.getElementById('import-appearance-input').click();
-});
 
-document.getElementById('import-appearance-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        importAppearanceSettings(file);
-    }
-    e.target.value = null; 
-});
 
 // ▼▼▼ 【全新】这是记录应用关闭时间的核心代码，请粘贴进去 ▼▼▼
 /**

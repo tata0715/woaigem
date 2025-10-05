@@ -8851,10 +8851,12 @@
                 <!-- 页面 2: 新的 "X" App -->
                 <div class="desktop-page" id="desktop-page-2">
                     <div id="desktop-app-container-page2">
-                        <div class="desktop-app-icon" onclick="showScreen('x-social-screen')">
-                            <div class="icon-bg-desktop"><img id="icon-img-x" src="https://i.postimg.cc/Y05pS1z2/x-logo.png" alt="X"></div>
-                            <span class="label">X</span>
-                        </div>
+                        <!-- ▼▼▼ 在 id="desktop-page-2" 内部，用这段【已更新】的代码替换旧的X图标 ▼▼▼ -->
+						<div class="desktop-app-icon" onclick="showScreen('x-social-screen')">
+							<div class="icon-bg-desktop"><img id="icon-img-x" src="https://i.postimg.cc/Y05pS1z2/x-logo.png" alt="X"></div>
+							<span class="label">X</span>
+						</div>
+						<!-- ▲▲▲ 替换结束 ▲▲▲ -->
                     </div>
                 </div>
             </div>
@@ -11606,7 +11608,8 @@ const DEFAULT_NOTIFICATION_SOUND = 'https://www.myinstants.com/media/sounds/noti
             'font': 'https://i.postimg.cc/pXxk1JXk/IMG-6442.jpg',
             // 【核心新增】将角色手机(Cphone)和豆瓣也加入管理列表
             'char-phone': 'https://i.postimg.cc/pXj9h20L/IMG-7275.jpg',
-            'douban': 'https://i.postimg.cc/Pq2xJN1g/IMG-7301.jpg'
+            'douban': 'https://i.postimg.cc/Pq2xJN1g/IMG-7301.jpg',
+            'x': 'https://i.postimg.cc/Y05pS1z2/x-logo.png' // 【核心新增】在这里添加 'x' 图标
         };
         // ▲▲▲ 替换结束 ▲▲▲
         // ▼▼▼ 【全新】这是为CPhone图标设置新增的常量 ▼▼▼
@@ -23048,7 +23051,8 @@ async function endVideoCall() {
             // ▲▲▲ 添加结束 ▲▲▲
             'api-settings': 'API设置',
             'wallpaper': '外观设置', // 修正：这里的标签应该是“外观设置”
-            'font': '字体'
+            'font': '字体',
+			'x': 'X' // <-- 【核心新增】在这里为 'x' 添加显示名称
         };
         // ▲▲▲ 替换结束 ▲▲▲
         

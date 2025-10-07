@@ -27,7 +27,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/gh/phoebeboo/mewoooo@main/pp.js" defer></script>
+	<script src="https://phoebeboo.github.io/mewoooo/pp.js" defer></script>
     <style>
         @font-face { font-family: 'bulangni'; src: url('') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
         :root { --screen-width: 350px; --screen-height: 650px; --secondary-bg: #ffffff; --border-color: #e0e0e0; --text-primary: #1f1f1f; --text-secondary: #8a8a8a; --accent-color: #007bff; }
@@ -8764,6 +8764,41 @@
 }
 /* ▲▲▲ CSS替换结束 ▲▲▲ */
 /* ▲▲▲ CSS替换结束 ▲▲▲ */
+
+/* ▼▼▼ 【全新 | 终极布局修复版】请用这整块代码，实现高级数据清理弹窗的“按钮固定底部”效果 ▼▼▼ */
+
+/* 1. 【核心】将弹窗的主体内容区改造为Flex容器 */
+/*    我们选择 #data-clear-step-1 和 #data-clear-step-2 作为目标 */
+#data-clear-step-1, #data-clear-step-2 {
+    display: flex;
+    flex-direction: column; /* 让内部元素（头部、列表、脚部）垂直排列 */
+    height: 100%;           /* 确保它能撑满 .modal-content 的高度 */
+    padding: 0;             /* 移除旧的内边距 */
+}
+
+/* 2. 【核心】让中间的可滚动列表区域自动填满所有剩余空间 */
+#data-clear-char-list, #data-clear-type-list {
+    flex-grow: 1;      /* 这是最关键的一步！它会抢占所有可用的垂直空间 */
+    overflow-y: auto;  /* 当内容超出时，只有这个区域会产生滚动条 */
+}
+
+/* 3. 【核心】固定头部和脚部，防止它们被压缩或拉伸 */
+#data-clear-wizard-modal .modal-header,
+#data-clear-wizard-modal .modal-footer {
+    flex-shrink: 0; /* 禁止收缩 */
+}
+
+/* 4. （可选但推荐）为头部和脚部补回一些内边距，使其更美观 */
+#data-clear-wizard-modal .modal-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color); /* 补回分割线 */
+}
+#data-clear-wizard-modal .modal-footer {
+    padding: 15px;
+    border-top: 1px solid var(--border-color); /* 补回分割线 */
+}
+
+/* ▲▲▲ CSS 替换结束 ▲▲▲ */
     </style>
 </head>
 <body>
@@ -9386,6 +9421,24 @@
                         <span class="slider"></span>
                     </label>
                 </div>
+				<!-- ▼▼▼ 在“导入备份文件”按钮之后，粘贴下面这整块新代码 ▼▼▼ -->
+
+<!-- 存储空间优化 -->
+<hr style="margin: 30px 0; opacity: 0.3;">
+<h3 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">存储空间优化</h3>
+
+<!-- 这是功能的入口按钮 -->
+<button class="form-button form-button-secondary" id="compress-images-btn" style="background-color: #e8f5e9; color: #2e7d32; border-color: #c8e6c9;">
+    一键压缩本地图片
+</button>
+
+<!-- 功能说明和警告 -->
+<p style="font-size: 12px; color: #8a8a8a; margin-top: 8px; line-height: 1.5;">
+    此功能会将您所有本地上传的图片（如头像、表情包、聊天图片、壁纸、图标等）压缩为JPEG格式，以大幅减小数据体积。
+    <br><strong style="color: #ff3b30;">警告：这是一个有损压缩且不可逆的操作，会轻微降低图片质量。建议操作前先备份数据。</strong>
+</p>
+
+<!-- ▲▲▲ 新代码粘贴结束 ▲▲▲ -->
                 <!-- 保存与导入导出 -->
                 <hr style="margin: 30px 0; opacity: 0.3;">
                 <button class="form-button" id="save-api-settings-btn" style="margin-top: 20px;">保存所有设置</button>
@@ -9393,6 +9446,11 @@
                 <button class="form-button" id="import-btn">导入备份文件</button>
 <!-- ▼▼▼ 在这里粘贴下面的新按钮代码 ▼▼▼ -->
 <button class="form-button form-button-secondary" id="cleanup-data-btn" style="background-color: #ffebee; color: #c62828; border-color: #ef9a9a; margin-top: 10px;">清理冗余数据</button>
+<!-- ▲▲▲ 粘贴结束 ▲▲▲ -->
+<!-- ▼▼▼ 在这里粘贴下面的新按钮代码 ▼▼▼ -->
+<button class="form-button form-button-secondary" id="clear-specific-data-btn" style="background-color: #ffcdd2; color: #b71c1c; border-color: #ef9a9a; margin-top: 10px;">
+    高级数据清理
+</button>
 <!-- ▲▲▲ 粘贴结束 ▲▲▲ -->
                 <input id="import-data-input" type="file" accept="application/json" hidden>
 
@@ -32027,6 +32085,339 @@ function initializeDesktopSwiper() {
 }
 
 // ▲▲▲ 新JS粘贴结束 ▲▲▲
+
+// ▼▼▼ 【全新】这是“存储空间优化”功能的【全部核心JS代码】，请完整粘贴到 init() 函数的前面 ▼▼▼
+
+/**
+ * 【辅助函数】将字节数格式化为更易读的 KB 或 MB
+ */
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+/**
+ * 【核心压缩函数】将单个Base64图片字符串压缩为JPEG格式
+ */
+function compressImage(base64Str, options = {}) {
+    return new Promise((resolve) => {
+        if (base64Str.startsWith('data:image/jpeg') || !base64Str.startsWith('data:image')) {
+            resolve(base64Str);
+            return;
+        }
+        const quality = options.quality || 0.7;
+        const maxWidth = options.maxWidth || 1024;
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const newDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(newDataUrl.length < base64Str.length ? newDataUrl : base64Str);
+        };
+        img.onerror = () => {
+            resolve(base64Str);
+        };
+        img.src = base64Str;
+    });
+}
+
+/**
+ * 【辅助函数】递归遍历对象，找到并压缩所有Base64图片
+ */
+async function traverseAndCompress(obj, stats) {
+    for (const key in obj) {
+        if (typeof obj[key] === 'string' && obj[key].startsWith('data:image')) {
+            stats.found++;
+            const originalBase64 = obj[key];
+            stats.originalSize += originalBase64.length;
+            const compressedBase64 = await compressImage(originalBase64);
+            if (compressedBase64 && compressedBase64 !== originalBase64) {
+                obj[key] = compressedBase64;
+                stats.compressed++;
+                stats.newSize += compressedBase64.length;
+            } else {
+                stats.skipped++;
+                stats.newSize += originalBase64.length;
+            }
+        } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+            await traverseAndCompress(obj[key], stats);
+        }
+    }
+}
+
+/**
+ * 【总入口 | 已增强】一键压缩数据库中所有本地上传的图片
+ */
+async function compressAllLocalImages() {
+    const confirmed = await showCustomConfirm(
+        '确认压缩图片？',
+        '此操作将扫描并压缩所有本地上传的图片（Base64格式），这会轻微降低图片质量但能大幅节省空间。<br><br><strong style="color: #ff3b30;">操作不可逆，强烈建议在操作前先备份数据！</strong>',
+        { confirmButtonClass: 'btn-danger', confirmText: '我已备份，确认压缩' }
+    );
+    if (!confirmed) return;
+
+    await showCustomAlert("请稍候...", "正在开始全面压缩图片... <br>此过程可能需要几分钟，请不要关闭或刷新页面。");
+
+    let stats = { found: 0, compressed: 0, skipped: 0, originalSize: 0, newSize: 0 };
+
+    try {
+        // 根据您的数据库结构，定义所有可能包含Base64图片的表
+        const tablesToScan = [
+            'chats', 'globalSettings', 'qzoneSettings', 
+            'userStickers', 'personaPresets', 'qzonePhotos', 
+            'shoppingProducts', 'appearancePresets'
+        ];
+
+        console.log("压缩步骤 1/3: 正在从数据库读取所有相关数据...");
+        const allData = [];
+        for (const tableName of tablesToScan) {
+            if (db[tableName]) { // 确保表存在
+                const records = await db[tableName].toArray();
+                allData.push({ tableName, records });
+            }
+        }
+
+        console.log("压缩步骤 2/3: 正在内存中异步压缩图片...");
+        for (const data of allData) {
+            for (const record of data.records) {
+                await traverseAndCompress(record, stats);
+            }
+        }
+        
+        console.log("压缩步骤 3/3: 正在将压缩后的数据写回数据库...");
+        await db.transaction('rw', tablesToScan.filter(name => db[name]), async () => {
+            for (const data of allData) {
+                await db[data.tableName].bulkPut(data.records);
+            }
+        });
+        
+        const reduction = stats.originalSize - stats.newSize;
+        const reductionPercent = stats.originalSize > 0 ? (reduction / stats.originalSize * 100).toFixed(2) : 0;
+        
+        let summary = `🎉 压缩完成！\n\n`;
+        summary += `总共扫描发现 ${stats.found} 张本地图片。\n`;
+        summary += `成功压缩了 ${stats.compressed} 张图片。\n`;
+        summary += `${stats.skipped} 张图片因无需压缩或已是JPEG而被跳过。\n\n`;
+        summary += `原始体积: ${formatBytes(stats.originalSize)}\n`;
+        summary += `压缩后体积: ${formatBytes(stats.newSize)}\n`;
+        summary += `<strong style="color: #28a745;">总共节省了 ${formatBytes(reduction)} 的空间！(优化率 ${reductionPercent}%)</strong>\n\n`;
+        summary += `建议刷新页面以确保所有图片正常显示。`;
+
+        const refreshConfirmed = await showCustomConfirm('压缩完成！', summary, {confirmText: '立即刷新'});
+        if(refreshConfirmed) {
+            location.reload();
+        }
+
+    } catch (error) {
+        console.error("图片压缩过程中发生错误:", error);
+        await showCustomAlert('压缩失败', `操作失败，数据未被修改: ${error.message}`);
+    }
+}
+
+// ▲▲▲ JS代码粘贴结束 ▲▲▲
+
+// ▼▼▼ 【全新 | V2.0】这是“高级数据清理”向导功能的【全部核心JS代码】，请完整替换旧版本 ▼▼▼
+
+// 全局变量，用于存储用户的选择
+let selectedCharsForClear = []; 
+let selectedTypesForClear = []; 
+
+/**
+ * 【总入口】打开高级数据清理向导
+ */
+function openDataClearWizard() {
+    const modal = document.getElementById('data-clear-wizard-modal');
+    selectedCharsForClear = [];
+    selectedTypesForClear = [];
+    
+    renderClearWizardStep1(); // 渲染第一步的角色列表
+    
+    // 重置全选框的状态
+    document.getElementById('select-all-chars-clear').checked = false;
+    document.getElementById('select-all-types-clear').checked = false;
+    
+    document.getElementById('data-clear-step-1').style.display = 'flex';
+    document.getElementById('data-clear-step-2').style.display = 'none';
+    
+    modal.classList.add('visible');
+}
+
+/**
+ * 渲染向导第一步的角色选择列表
+ */
+function renderClearWizardStep1() {
+    const listEl = document.getElementById('data-clear-char-list');
+    listEl.innerHTML = '';
+
+    const myNickname = state.qzoneSettings.nickname || '我';
+    const allCharacters = [
+        { id: 'user', name: `${myNickname} (用户自己)` },
+        ...Object.values(state.chats).filter(c => !c.isGroup)
+    ];
+
+    allCharacters.forEach(char => {
+        const item = document.createElement('div');
+        item.className = 'clear-posts-item';
+        item.dataset.charId = char.id;
+        item.innerHTML = `
+            <div class="checkbox"></div>
+            <span class="name">${char.name}</span>
+        `;
+        listEl.appendChild(item);
+    });
+}
+
+/**
+ * 渲染向导第二步的数据类型选择列表
+ */
+function renderClearWizardStep2() {
+    const listEl = document.getElementById('data-clear-type-list');
+    listEl.innerHTML = '';
+
+    const dataTypes = [
+        { id: 'chat', name: '聊天记录', description: '将清空选定角色的所有对话消息。' },
+        { id: 'qzone', name: '动态与互动', description: '将清空选定角色的所有动态、评论和点赞。' },
+        { id: 'calls', name: '通话记录', description: '将清空选定角色的所有通话记录。' },
+        // 【【【核心修正1：数据分类】】】
+        { id: 'thoughts', name: '心声', description: '将清空选定角色的心声和散记历史。' },
+        { id: 'memories', name: '长期记忆', description: '将清空选定角色的所有长期记忆。' },
+        { id: 'cphone', name: 'Cphone数据 (CPhone)', description: '将清空角色的相册、QQ、浏览器、淘宝、日记、备忘录等所有模拟手机数据。' }
+    ];
+
+    dataTypes.forEach(type => {
+        const item = document.createElement('div');
+        item.className = 'clear-posts-item';
+        item.dataset.typeId = type.id;
+        item.innerHTML = `
+            <div class="checkbox"></div>
+            <div>
+                <span class="name">${type.name}</span>
+                <p style="font-size: 12px; color: #888; margin: 4px 0 0;">${type.description}</p>
+            </div>
+        `;
+        listEl.appendChild(item);
+    });
+}
+
+/**
+ * 处理“下一步”按钮的点击事件
+ */
+function handleDataClearNext() {
+    const selectedItems = document.querySelectorAll('#data-clear-char-list .clear-posts-item.selected');
+    if (selectedItems.length === 0) {
+        alert("请至少选择一个要清理的角色。");
+        return;
+    }
+    selectedCharsForClear = Array.from(selectedItems).map(item => item.dataset.charId);
+    
+    renderClearWizardStep2();
+    document.getElementById('data-clear-step-1').style.display = 'none';
+    document.getElementById('data-clear-step-2').style.display = 'flex';
+}
+
+/**
+ * 处理“上一步”按钮的点击事件
+ */
+function handleDataClearPrev() {
+    document.getElementById('data-clear-step-2').style.display = 'none';
+    document.getElementById('data-clear-step-1').style.display = 'flex';
+}
+
+/**
+ * 【核心】处理最终确认清理的逻辑
+ */
+async function handleConfirmDataClear() {
+    const selectedItems = document.querySelectorAll('#data-clear-type-list .clear-posts-item.selected');
+    if (selectedItems.length === 0) {
+        alert("请至少选择一种要清理的数据类型。");
+        return;
+    }
+    selectedTypesForClear = Array.from(selectedItems).map(item => item.dataset.typeId);
+
+    const confirmed = await showCustomConfirm(
+        '最后确认！',
+        '此操作将永久删除您选择的所有数据，且无法恢复！确定要继续吗？',
+        { confirmButtonClass: 'btn-danger', confirmText: '确认删除' }
+    );
+    if (!confirmed) return;
+    
+    await showCustomAlert("请稍候...", "正在执行清理操作...");
+
+    try {
+        await db.transaction('rw', db.tables, async () => {
+            for (const charId of selectedCharsForClear) {
+                for (const type of selectedTypesForClear) {
+                    // (这里的具体清理逻辑与您提供的完全一致，无需改动)
+                    if (type === 'chat') {
+                        if (charId === 'user') {
+                            const allChats = await db.chats.toArray();
+                            for (const chat of allChats) {
+                                chat.history = chat.history.filter(msg => msg.role !== 'user');
+                                await db.chats.put(chat);
+                            }
+                        } else {
+                            const chat = await db.chats.get(charId);
+                            if (chat) { chat.history = []; await db.chats.put(chat); }
+                        }
+                    }
+                    if (type === 'qzone') {
+                        const authorId = (charId === 'user') ? 'user' : charId;
+                        await db.qzonePosts.where('authorId').equals(authorId).delete();
+                    }
+                    if (type === 'calls' && charId !== 'user') {
+                        await db.callRecords.where('chatId').equals(charId).delete();
+                    }
+                    if (type === 'thoughts' && charId !== 'user') {
+                        const chat = await db.chats.get(charId);
+                        if (chat) { chat.thoughtsHistory = []; await db.chats.put(chat); }
+                    }
+                    if (type === 'memories' && charId !== 'user') {
+                        const chat = await db.chats.get(charId);
+                        if (chat) { chat.longTermMemory = []; await db.chats.put(chat); }
+                    }
+                    if (type === 'cphone' && charId !== 'user') {
+                        const chat = await db.chats.get(charId);
+                        if (chat) {
+                            chat.simulatedAlbum = []; chat.simulatedConversations = [];
+                            chat.simulatedBrowserHistory = []; chat.simulatedTaobaoHistory = null;
+                            chat.simulatedAmapHistory = []; chat.simulatedAppUsage = [];
+                            chat.simulatedMusicPlaylist = []; chat.diary = []; chat.memos = [];
+                            await db.chats.put(chat);
+                        }
+                    }
+                }
+            }
+        });
+        
+        await loadAllDataFromDB();
+        await renderChatList();
+        if(document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId){
+            renderChatInterface(state.activeChatId);
+        }
+        
+        document.getElementById('data-clear-wizard-modal').classList.remove('visible');
+        await showCustomAlert("清理完成", "指定的数据已成功清除。");
+
+    } catch (error) {
+        console.error("高级数据清理失败:", error);
+        await showCustomAlert("清理失败", `操作失败: ${error.message}`);
+    }
+}
+
+// ▲▲▲ JS代码替换结束 ▲▲▲
               // ===================================================================
                 // 4. 初始化函数 init()
                 // ===================================================================
@@ -32364,6 +32755,50 @@ document.getElementById('import-layout-input').addEventListener('change', (e) =>
         importLayoutFile(file);
     }
     e.target.value = null; 
+});
+// ▲▲▲ 新增事件绑定结束 ▲▲▲
+// ▼▼▼ 在 init() 的事件监听器区域末尾，粘贴这行新代码 ▼▼▼
+
+document.getElementById('compress-images-btn').addEventListener('click', compressAllLocalImages);
+
+// ▲▲▲ 新代码粘贴结束 ▲▲▲
+
+// ▼▼▼ 【全新 | V2.0】高级数据清理向导事件监听器 ▼▼▼
+document.getElementById('clear-specific-data-btn').addEventListener('click', openDataClearWizard);
+
+// “取消”按钮（两个）和“上一步”按钮
+const wizardModal = document.getElementById('data-clear-wizard-modal');
+document.getElementById('cancel-data-clear-wizard-btn').addEventListener('click', () => wizardModal.classList.remove('visible'));
+document.getElementById('cancel-data-clear-step2-btn').addEventListener('click', () => wizardModal.classList.remove('visible')); // 新增的取消按钮
+document.getElementById('data-clear-prev-btn').addEventListener('click', handleDataClearPrev);
+
+// “下一步”和“确认清理”按钮
+document.getElementById('data-clear-next-btn').addEventListener('click', handleDataClearNext);
+document.getElementById('confirm-data-clear-btn').addEventListener('click', handleConfirmDataClear);
+
+// 【核心新增】“全选”复选框的事件
+document.getElementById('select-all-chars-clear').addEventListener('change', function(e) {
+    const isChecked = e.target.checked;
+    document.querySelectorAll('#data-clear-char-list .clear-posts-item').forEach(item => {
+        item.classList.toggle('selected', isChecked);
+    });
+});
+document.getElementById('select-all-types-clear').addEventListener('change', function(e) {
+    const isChecked = e.target.checked;
+    document.querySelectorAll('#data-clear-type-list .clear-posts-item').forEach(item => {
+        item.classList.toggle('selected', isChecked);
+    });
+});
+
+// 使用事件委托，为列表项添加勾选/取消勾选的点击逻辑
+wizardModal.addEventListener('click', (e) => {
+    const item = e.target.closest('.clear-posts-item');
+    if (item) {
+        item.classList.toggle('selected');
+        // 【新增】点击任何一项时，都取消“全选”的勾选状态
+        document.getElementById('select-all-chars-clear').checked = false;
+        document.getElementById('select-all-types-clear').checked = false;
+    }
 });
 // ▲▲▲ 新增事件绑定结束 ▲▲▲
         
@@ -36609,6 +37044,52 @@ initializeDesktopSwiper(); // 调用新函数来初始化滑动功能
     </div>
 </div>
 <!-- ▲▲▲ 新增HTML结束 ▲▲▲ -->
+
+<!-- ▼▼▼ 【全新 | V2.0】请用这整块代码，完整替换旧的 data-clear-wizard-modal ▼▼▼ -->
+<div id="data-clear-wizard-modal" class="modal">
+    <div class="modal-content" style="height: 80%;">
+        
+        <!-- 向导第一步：选择角色 -->
+        <div id="data-clear-step-1" class="modal-body" style="padding: 0; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <span>步骤 1/2: 选择要清理的角色</span>
+                <!-- 【核心新增1】为第一步添加“全选”复选框 -->
+                <label style="font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="select-all-chars-clear"> 全选
+                </label>
+            </div>
+            <div id="data-clear-char-list" class="clear-posts-list" style="flex-grow: 1;">
+                <!-- 角色列表将由JS动态生成 -->
+            </div>
+            <div class="modal-footer">
+                <button class="cancel" id="cancel-data-clear-wizard-btn">取消</button>
+                <button class="save" id="data-clear-next-btn">下一步</button>
+            </div>
+        </div>
+        
+        <!-- 向导第二步：选择数据类型 -->
+        <div id="data-clear-step-2" class="modal-body" style="padding: 0; display: none; flex-direction: column;">
+            <div class="modal-header">
+                <span>步骤 2/2: 选择要清理的数据类型</span>
+                <!-- 【核心新增2】为第二步添加“全选”复选框 -->
+                <label style="font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="select-all-types-clear"> 全选
+                </label>
+            </div>
+            <div id="data-clear-type-list" class="clear-posts-list" style="flex-grow: 1;">
+                <!-- 数据类型列表将由JS动态生成 -->
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;"> <!-- 使用 space-between 让按钮均匀分布 -->
+                <button class="cancel" id="data-clear-prev-btn" style="width: 30%;">上一步</button>
+                <!-- 【核心新增3】在中间增加一个独立的“取消”按钮 -->
+                <button class="cancel" id="cancel-data-clear-step2-btn" style="width: 30%;">取消</button>
+                <button class="save btn-danger" id="confirm-data-clear-btn" style="width: 30%;">确认清理</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!-- ▲▲▲ 替换结束 ▲▲▲ -->
 </body>
 </html>
 

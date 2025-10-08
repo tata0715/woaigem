@@ -8832,6 +8832,72 @@
     border-color: #38383a;
 }
 /* ▲▲▲ 新增CSS结束 ▲▲▲ */
+
+/* ▼▼▼ 【全新 | 终极修复版】请用这整块代码替换所有旧的“滑动操作”CSS ▼▼▼ */
+
+/* 1. 列表项的总容器，负责定位和裁剪 */
+.chat-item-wrapper {
+    position: relative;
+    /* 【核心修复1】确保容器本身没有背景色，由内部元素决定 */
+    background-color: transparent; 
+}
+
+/* 2. 隐藏在右侧的操作按钮区域 */
+.chat-item-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    
+    /* 【核心修复2】默认情况下，按钮区域的宽度为0，且内容被隐藏 */
+    width: 0;
+    overflow: hidden;
+    
+    /* 【核心修复3】为宽度的变化添加平滑的过渡效果 */
+    transition: width 0.3s ease;
+}
+
+/* 3. 单个操作按钮的样式 (保持不变) */
+.chat-item-actions .action-button {
+    height: 100%;
+    border: none;
+    color: white;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    /* 【核心修复4】固定每个按钮的宽度，方便计算 */
+    width: 80px; 
+    flex-shrink: 0; /* 防止按钮被压缩 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-item-actions .pin-btn { background-color: #fca43d; }
+.chat-item-actions .delete-btn { background-color: #ff3b30; }
+
+/* 4. 可滑动的内容项 (保持不变) */
+.chat-item-wrapper .chat-list-item {
+    transition: transform 0.3s ease;
+    background-color: var(--secondary-bg);
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 5. 【核心】当内容项左滑时 */
+.chat-item-wrapper .chat-list-item.swiped {
+    /* a. 将内容项向左移动160px (两个按钮的宽度) */
+    transform: translateX(-160px); 
+}
+/* b. 同时，将下方的按钮区域宽度恢复为160px，让按钮显现出来 */
+.chat-item-wrapper .chat-list-item.swiped + .chat-item-actions {
+    width: 160px;
+}
+/* ▲▲▲ CSS 替换结束 ▲▲▲ */
     </style>
 </head>
 <body>
@@ -14309,76 +14375,90 @@ async function loadAllDataFromDB() {
         // ▲▲▲ 替换结束 ▲▲▲
                 window.renderApiSettingsProxy = renderApiSettings;
         
-        // ▼▼▼ 请用这个【全新版本】的函数，完整替换掉你旧的 renderChatList ▼▼▼
-        async function renderChatList() {
-            const chatListEl = document.getElementById('chat-list');
-            chatListEl.innerHTML = '';
-        
-            // 1. 获取所有聊天并进行【多级排序】
-            const allChats = Object.values(state.chats).sort((a, b) => {
-                // 规则1：按 isPinned 降序排（true的在前）
-                const pinDiff = (b.isPinned || false) - (a.isPinned || false);
-                if (pinDiff !== 0) return pinDiff;
-        
-                // 规则2：如果置顶状态相同，则按最新消息时间降序排
-                return (b.history.slice(-1)[0]?.timestamp || 0) - (a.history.slice(-1)[0]?.timestamp || 0);
-            });
-            
-            // 2. 获取所有分组
-            const allGroups = await db.qzoneGroups.toArray();
-        
-            if (allChats.length === 0) {
-                chatListEl.innerHTML = '<p style="text-align:center; color: #8a8a8a; margin-top: 50px;">点击右上角 "+" 或群组图标添加聊天</p>';
-                return;
-            }
-        
-            // 3. 为每个分组找到其内部最新的消息时间戳
-            allGroups.forEach(group => {
-                const latestChatInGroup = allChats.find(chat => chat.groupId === group.id);
-                group.latestTimestamp = latestChatInGroup ? (latestChatInGroup.history.slice(-1)[0]?.timestamp || 0) : 0;
-            });
-        
-            // 4. 根据这个最新的时间戳来对“分组本身”进行排序
-            allGroups.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
-        
-            // 5. 现在，我们按照排好序的分组来渲染
-            allGroups.forEach(group => {
-                const groupChats = allChats.filter(chat => !chat.isGroup && chat.groupId === group.id);
-                if (groupChats.length === 0) return;
-        
-                const groupContainer = document.createElement('div');
-                groupContainer.className = 'chat-group-container';
-                groupContainer.innerHTML = `
-                    <div class="chat-group-header">
-                        <span class="arrow">▼</span>
-                        <span class="group-name">${group.name}</span>
-                    </div>
-                    <div class="chat-group-content"></div>
-                `;
-                const contentEl = groupContainer.querySelector('.chat-group-content');
-                groupChats.forEach(chat => {
-                    const item = createChatListItem(chat);
-                    contentEl.appendChild(item);
-                });
-                chatListEl.appendChild(groupContainer);
-            });
-        
-            // 6. 最后，渲染所有群聊和未分组的好友
-            const ungroupedOrGroupChats = allChats.filter(chat => chat.isGroup || (!chat.isGroup && !chat.groupId));
-            ungroupedOrGroupChats.forEach(chat => {
-                const item = createChatListItem(chat);
-                chatListEl.appendChild(item);
-            });
-        
-            // 为所有分组标题添加折叠事件
-            document.querySelectorAll('.chat-group-header').forEach(header => {
-                header.addEventListener('click', () => {
-                    header.classList.toggle('collapsed');
-                    header.nextElementSibling.classList.toggle('collapsed');
-                });
-            });
+        // ▼▼▼ 【全新 | 全局置顶修复版】请用这个函数完整替换旧的 renderChatList ▼▼▼
+async function renderChatList() {
+    const chatListEl = document.getElementById('chat-list');
+    chatListEl.innerHTML = '';
+
+    // 1. 【核心修复】获取所有聊天并进行【全局置顶排序】
+    //    现在的排序逻辑是：先比较 isPinned，如果相同，再比较时间戳。
+    const allChats = Object.values(state.chats).sort((a, b) => {
+        const pinA = a.isPinned ? 1 : 0;
+        const pinB = b.isPinned ? 1 : 0;
+        if (pinB !== pinA) {
+            return pinB - pinA; // 置顶的在前
         }
-        // ▲▲▲ 替换结束 ▲▲▲
+        // 如果置顶状态相同，则按最新消息时间降序排
+        return (b.history.slice(-1)[0]?.timestamp || 0) - (a.history.slice(-1)[0]?.timestamp || 0);
+    });
+    
+    const allGroups = await db.qzoneGroups.toArray();
+
+    if (allChats.length === 0) {
+        chatListEl.innerHTML = '<p style="text-align:center; color: #8a8a8a; margin-top: 50px;">点击右上角 "+" 或群组图标添加聊天</p>';
+        return;
+    }
+
+    // 2. 将已排序的列表分为“置顶”和“非置顶”两部分
+    const pinnedChats = allChats.filter(chat => chat.isPinned);
+    const unpinnedChats = allChats.filter(chat => !chat.isPinned);
+
+    // 3. 渲染置顶聊天 (它们会无视分组，永远在最上面)
+    pinnedChats.forEach(chat => {
+        const item = createChatListItem(chat);
+        chatListEl.appendChild(item);
+    });
+
+    // 4. 【核心修复】现在，我们只对“非置顶”的聊天进行分组渲染
+    const unpinnedGroups = new Map();
+    unpinnedChats.forEach(chat => {
+        if (!chat.isGroup && chat.groupId) {
+            if (!unpinnedGroups.has(chat.groupId)) {
+                unpinnedGroups.set(chat.groupId, []);
+            }
+            unpinnedGroups.get(chat.groupId).push(chat);
+        }
+    });
+
+    // 渲染分组的非置顶聊天
+    allGroups.forEach(group => {
+        const groupChats = unpinnedGroups.get(group.id);
+        if (groupChats && groupChats.length > 0) {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'chat-group-container';
+            groupContainer.innerHTML = `
+                <div class="chat-group-header">
+                    <span class="arrow">▼</span>
+                    <span class="group-name">${group.name}</span>
+                </div>
+                <div class="chat-group-content"></div>
+            `;
+            const contentEl = groupContainer.querySelector('.chat-group-content');
+            groupChats.forEach(chat => {
+                const item = createChatListItem(chat);
+                contentEl.appendChild(item);
+            });
+            chatListEl.appendChild(groupContainer);
+        }
+    });
+
+    // 5. 最后，渲染所有群聊和未分组的非置顶好友
+    unpinnedChats.forEach(chat => {
+        if (chat.isGroup || (!chat.isGroup && !chat.groupId)) {
+            const item = createChatListItem(chat);
+            chatListEl.appendChild(item);
+        }
+    });
+
+    // 为所有分组标题添加折叠事件
+    document.querySelectorAll('.chat-group-header').forEach(header => {
+        header.addEventListener('click', () => {
+            header.classList.toggle('collapsed');
+            header.nextElementSibling.classList.toggle('collapsed');
+        });
+    });
+}
+// ▲▲▲ 替换结束 ▲▲▲
         
         // ▼▼▼ 请用这个【已升级HTML结构并修复点击问题】的全新版本，完整替换您现有的 createChatListItem 函数 ▼▼▼
         function createChatListItem(chat) {
@@ -14414,108 +14494,53 @@ async function loadAllDataFromDB() {
             lastMsgDisplay = `[${statusText}]`;
         }
         
-            const item = document.createElement('div');
-            item.className = 'chat-list-item';
-            item.dataset.chatId = chat.id;
-            if (chat.isPinned) {
-                item.classList.add('pinned');
-            }
-        
-            // ▼▼▼ 从这里开始是核心修改：为聊天列表也生成带框头像的HTML结构 ▼▼▼
-            const avatar = chat.isGroup ? chat.settings.groupAvatar : chat.settings.aiAvatar;
-            // 群聊列表项暂时不显示头像框，只为单聊显示
-            const avatarFrameSrc = chat.isGroup ? '' : (chat.settings.aiAvatarFrame || '');
-        
-            let avatarHtml;
-            if (avatarFrameSrc) {
-                avatarHtml = `
-                    <div class="avatar-with-frame">
-                        <img src="${avatar || defaultAvatar}" class="avatar-img">
-                        <img src="${avatarFrameSrc}" class="avatar-frame">
-                    </div>
-                `;
-            } else {
-                // 注意：这里的 class 依然是 'avatar'，以兼容旧的CSS样式
-                avatarHtml = `<img src="${avatar || defaultAvatar}" class="avatar">`;
-            }
-        
-            const hasFrameClass = avatarFrameSrc ? 'has-frame' : '';
-            // 使用与聊天界面一致的 .avatar-group 容器
-            const avatarGroupHtml = `<div class="avatar-group ${hasFrameClass}">${avatarHtml}</div>`;
-            // ▲▲▲ HTML结构升级结束 ▲▲▲
-        
-            item.innerHTML = `
-                ${avatarGroupHtml}
-                <div class="info">
-                    <div class="name-line">
-                        <span class="name">${chat.name}</span>
-                        ${chat.isGroup ? '<span class="group-tag">群聊</span>' : ''}
-                    </div>
-                    <div class="last-msg" style="color: ${chat.isGroup ? 'var(--text-secondary)' : '#b5b5b5'}; font-style: italic;">${lastMsgDisplay}</div>
-                </div>
-                <div class="unread-count-wrapper">
-                    <span class="unread-count" style="display: none;">0</span>
-                </div>
-            `;
-            
-            const unreadCount = chat.unreadCount || 0;
-            const unreadEl = item.querySelector('.unread-count');
-            if (unreadCount > 0) {
-                unreadEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                unreadEl.style.display = 'inline-flex';
-            } else {
-                unreadEl.style.display = 'none';
-            }
-            
-            // ▼▼▼ 在这里开始修改 ▼▼▼
-            const avatarGroupEl = item.querySelector('.avatar-group');
-            if (avatarGroupEl) {
-                avatarGroupEl.style.cursor = 'pointer';
-                // 将 'click' 事件改为 'dblclick'
-                avatarGroupEl.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    const nameToPat = chat.isGroup ? chat.name : chat.originalName;
-                    handleUserPat(chat.id, nameToPat);
-                });
-            }
-            // ▲▲▲ 修改结束 ▲▲▲
-            
-            const infoEl = item.querySelector('.info');
-            if (infoEl) {
-                infoEl.addEventListener('click', () => openChat(chat.id));
-            }
-        
-            addLongPressListener(item, async (e) => {
-                const action = await showChatListActions(chat);
-                switch (action) {
-                    case 'pin':
-                        chat.isPinned = !chat.isPinned;
-                        await db.chats.put(chat);
-                        renderChatList();
-                        break;
-                    case 'delete':
-                        const deleteConfirmed = await showCustomConfirm(
-                            '删除对话', 
-                            `确定要删除与 "${chat.name}" 的整个对话吗？此操作不可撤销。`, 
-                            { confirmButtonClass: 'btn-danger' }
-                        );
-                        if (deleteConfirmed) {
-                            if (musicState.isActive && musicState.activeChatId === chat.id) {
-                                await endListenTogetherSession(false);
-                            }
-                            delete state.chats[chat.id];
-                            if (state.activeChatId === chat.id) {
-                                state.activeChatId = null;
-                            }
-                            await db.chats.delete(chat.id);
-                            renderChatList();
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-            return item;
+            // --- 【核心修改】从这里开始，生成全新的HTML结构 ---
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-item-wrapper';
+    wrapper.dataset.chatId = chat.id;
+
+    // 创建可滑动的内容项
+    const item = document.createElement('div');
+    item.className = 'chat-list-item';
+    if (chat.isPinned) {
+        item.classList.add('pinned');
+    }
+    
+    const avatar = chat.isGroup ? chat.settings.groupAvatar : chat.settings.aiAvatar;
+    const avatarFrameSrc = chat.isGroup ? '' : (chat.settings.aiAvatarFrame || '');
+    let avatarHtml = avatarFrameSrc ? `<div class="avatar-with-frame"><img src="${avatar || defaultAvatar}" class="avatar-img"><img src="${avatarFrameSrc}" class="avatar-frame"></div>` : `<img src="${avatar || defaultAvatar}" class="avatar">`;
+    const hasFrameClass = avatarFrameSrc ? 'has-frame' : '';
+    const avatarGroupHtml = `<div class="avatar-group ${hasFrameClass}">${avatarHtml}</div>`;
+    
+    item.innerHTML = `
+        ${avatarGroupHtml}
+        <div class="info">
+            <div class="name-line">
+                <span class="name">${chat.name}</span>
+                ${chat.isGroup ? '<span class="group-tag">群聊</span>' : ''}
+            </div>
+            <div class="last-msg" style="color: ${chat.isGroup ? 'var(--text-secondary)' : '#b5b5b5'}; font-style: italic;">${lastMsgDisplay}</div>
+        </div>
+        <div class="unread-count-wrapper">
+            <span class="unread-count" style="display: none;">${chat.unreadCount > 0 ? (chat.unreadCount > 99 ? '99+' : chat.unreadCount) : ''}</span>
+        </div>
+    `;
+    if (chat.unreadCount > 0) item.querySelector('.unread-count').style.display = 'inline-flex';
+    
+    // 创建隐藏的操作按钮
+    const actions = document.createElement('div');
+    actions.className = 'chat-item-actions';
+    actions.innerHTML = `
+        <button class="action-button pin-btn">${chat.isPinned ? '取消置顶' : '置顶'}</button>
+        <button class="action-button delete-btn">删除</button>
+    `;
+    
+    // 将内容项和操作按钮都添加到总容器中
+    wrapper.appendChild(item);
+    wrapper.appendChild(actions);
+
+    return wrapper;
         }
         // ▲▲▲ 替换结束 ▲▲▲
         
@@ -32571,6 +32596,90 @@ function clearSearchFilters() {
 
 // ▲▲▲ JS代码粘贴结束 ▲▲▲
 
+// ▼▼▼ 【全新】这是为聊天列表滑动功能添加的【全部JS逻辑】，请粘贴到 init() 前面 ▼▼▼
+let chatSwipeState = { isDragging: false, startX: 0, startY: 0, activeWrapper: null, isClick: true };
+
+/**
+ * 关闭所有已打开的滑动项
+ * @param {HTMLElement} exceptThisOne - (可选) 保持这个元素打开
+ */
+function resetAllChatSwipes(exceptThisOne = null) {
+    document.querySelectorAll('.chat-item-wrapper').forEach(wrapper => {
+        if (wrapper !== exceptThisOne) {
+            wrapper.querySelector('.chat-list-item').classList.remove('swiped');
+        }
+    });
+}
+
+/**
+ * 处理滑动开始事件
+ */
+const handleChatSwipeStart = (e) => {
+    const targetWrapper = e.target.closest('.chat-item-wrapper');
+    if (!targetWrapper) return;
+
+    resetAllChatSwipes(targetWrapper);
+    chatSwipeState.activeWrapper = targetWrapper;
+    chatSwipeState.isDragging = true;
+    chatSwipeState.isClick = true;
+    chatSwipeState.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+    chatSwipeState.startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+    chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transition = 'none';
+};
+
+/**
+ * 处理滑动过程事件
+ */
+const handleChatSwipeMove = (e) => {
+    if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
+
+    const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+    const diffX = currentX - chatSwipeState.startX;
+
+    if (chatSwipeState.isClick && Math.abs(diffX) > 5) {
+        chatSwipeState.isClick = false;
+    }
+    
+    if (diffX < 0) { // 只允许向左滑动
+        e.preventDefault();
+        const translation = Math.max(-160, diffX); // 最大滑动距离160px
+        chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transform = `translateX(${translation}px)`;
+    }
+};
+
+/**
+ * 处理滑动结束事件
+ */
+const handleChatSwipeEnd = (e) => {
+    if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
+    
+    const postItem = chatSwipeState.activeWrapper.querySelector('.chat-list-item');
+    postItem.style.transition = 'transform 0.3s ease';
+
+    if (!chatSwipeState.isClick) {
+        const finalX = e.type.includes('touchend') ? e.changedTouches[0].pageX : e.pageX;
+        const diffX = finalX - chatSwipeState.startX;
+        if (diffX < -60) { // 滑动超过60像素就自动展开
+            postItem.classList.add('swiped');
+        } else {
+            postItem.classList.remove('swiped');
+        }
+    }
+    
+    postItem.style.transform = ''; // 清除内联样式，让CSS class接管
+
+    // 【【【核心修复就在这里！】】】
+    // 只有当它是一个纯粹的点击，并且点击的目标不是操作按钮时，才打开聊天
+    if (chatSwipeState.isClick && !e.target.closest('.chat-item-actions .action-button')) {
+        openChat(chatSwipeState.activeWrapper.dataset.chatId);
+    }
+    // 【【【修复结束】】】
+
+    chatSwipeState.isDragging = false;
+    chatSwipeState.activeWrapper = null;
+};
+// ▲▲▲ 新增JS代码结束 ▲▲▲
+
               // ===================================================================
                 // 4. 初始化函数 init()
                 // ===================================================================
@@ -32965,6 +33074,56 @@ document.getElementById('search-history-back-btn').addEventListener('click', () 
 
 document.getElementById('execute-search-btn').addEventListener('click', handleSearchHistory);
 document.getElementById('clear-search-btn').addEventListener('click', clearSearchFilters);
+// ▲▲▲ 新增事件绑定结束 ▲▲▲
+
+// ▼▼▼ 【全新】聊天列表事件委托，请粘贴到 init() 的事件监听器区域 ▼▼▼
+const chatListEl = document.getElementById('chat-list');
+
+// 统一处理点击事件
+chatListEl.addEventListener('click', async (e) => {
+    const target = e.target;
+    const wrapper = target.closest('.chat-item-wrapper');
+    if (!wrapper) return;
+
+    const chatId = wrapper.dataset.chatId;
+    const chat = state.chats[chatId];
+    if (!chat) return;
+
+    // 如果点击的是“置顶”按钮
+    if (target.classList.contains('pin-btn')) {
+        chat.isPinned = !chat.isPinned;
+        await db.chats.put(chat);
+        await renderChatList(); // 重新渲染以应用排序
+        return; // 阻止后续的点击事件
+    }
+    
+    // 如果点击的是“删除”按钮
+    if (target.classList.contains('delete-btn')) {
+        const confirmed = await showCustomConfirm(
+            '删除对话', 
+            `确定要删除与 "${chat.name}" 的整个对话吗？此操作不可撤销。`, 
+            { confirmButtonClass: 'btn-danger' }
+        );
+        if (confirmed) {
+            // (这里的删除逻辑与您原来的一样)
+            delete state.chats[chatId];
+            if (state.activeChatId === chatId) state.activeChatId = null;
+            await db.chats.delete(chatId);
+            await renderChatList();
+        }
+        return; // 阻止后续的点击事件
+    }
+});
+
+// 绑定滑动开始事件
+chatListEl.addEventListener('mousedown', handleChatSwipeStart);
+chatListEl.addEventListener('touchstart', handleChatSwipeStart, { passive: false });
+
+// 【重要】将滑动过程和结束事件绑定到 document 上，确保手指/鼠标移出列表时依然有效
+document.addEventListener('mousemove', handleChatSwipeMove, { passive: false });
+document.addEventListener('mouseup', handleChatSwipeEnd);
+document.addEventListener('touchmove', handleChatSwipeMove, { passive: false });
+document.addEventListener('touchend', handleChatSwipeEnd);
 // ▲▲▲ 新增事件绑定结束 ▲▲▲
         
         // ▼▼▼ 【全新】为单聊“拍一拍”按钮绑定事件 ▼▼▼

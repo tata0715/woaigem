@@ -60,7 +60,7 @@
         #phone-screen {
             width: 100%;
             /* Use 100vh to ensure it fills the entire screen height */
-            height: 100%; 
+            height: 100vh; 
             position: relative;
             overflow: hidden;
             display: flex;
@@ -6067,9 +6067,9 @@
     background-size: cover;
     background-position: center;
     /* ▲▲▲ 修复结束 ▲▲▲ */
-    padding: 20px;
-    padding-top: calc(20px + env(safe-area-inset-top));
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    padding: 0px;
+    padding-top: calc(0px + env(safe-area-inset-top));
+    padding-bottom: calc(0px + env(safe-area-inset-bottom));
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -6279,7 +6279,7 @@
     display: flex;
     justify-content: center;
     gap: 30px;
-    width: fit-content;
+    width: 85%;
     flex-shrink: 0;
 }
 .desktop-app-icon {
@@ -10990,7 +10990,12 @@
         </div>
         <div class="form-group" id="ai-persona-group"><label for="ai-persona">对方人设 (AI Persona)</label><textarea id="ai-persona" rows="3"></textarea></div>
         <div class="form-group" id="ai-avatar-group"><label>对方头像</label>
-            <div class="avatar-upload"><img id="ai-avatar-preview"><button onclick="document.getElementById('ai-avatar-input').click()">上传对方头像</button><button id="manage-ai-avatar-library-btn">管理头像库</button><button class="change-frame-btn" data-type="ai">更换头像框</button>
+            <div class="avatar-upload">
+                <img id="ai-avatar-preview">
+                <button onclick="document.getElementById('ai-avatar-input').click()">本地上传</button>
+                <button id="upload-ai-avatar-url-btn">网络URL</button>
+                <button id="manage-ai-avatar-library-btn">管理头像库</button>
+                <button class="change-frame-btn" data-type="ai">更换头像框</button>
                 <input type="file" id="ai-avatar-input" accept="image/*">
             </div>
         </div>
@@ -11003,10 +11008,11 @@
             <label>我的头像</label>
             <div class="avatar-upload">
                 <img id="my-avatar-preview">
-                <button onclick="document.getElementById('my-avatar-input').click()">上传我的头像</button>
+                <button onclick="document.getElementById('my-avatar-input').click()">本地上传</button>
+                <button id="upload-my-avatar-url-btn">网络URL</button>
                 <button id="manage-my-avatar-library-btn">管理头像库</button>
-                <button class="change-frame-btn" data-type="my">更换头像框</button>
                 <button id="open-persona-library-btn">预设</button>
+                <button class="change-frame-btn" data-type="my">更换头像框</button>
                 <input type="file" id="my-avatar-input" accept="image/*">
             </div>
         </div>
@@ -12804,7 +12810,9 @@ const DEFAULT_NOTIFICATION_SOUND = 'https://www.myinstants.com/media/sounds/noti
         }
         // ▲▲▲ 新函数粘贴结束 ▲▲▲
 
-		/**
+		// ▼▼▼ 把这一整块全新的函数，粘贴到你的JS功能函数定义区 ▼▼▼
+
+/**
  * 【全新】从一个数组中随机获取一个元素
  * @param {Array} arr - 目标数组
  * @returns {*} - 数组中的一个随机元素
@@ -14206,6 +14214,102 @@ async function cleanupRedundantData() {
                 await showCustomAlert('导出失败', `发生了一个错误: ${error.message}`);
             }
         }
+
+/**
+         * 【全新 | V3.0 桌面/移动端终极兼容版】导出所有数据
+         */
+        async function exportData() {
+            try {
+                // --- 步骤 1: 收集数据 (保持不变) ---
+                const backupData = {
+                    version: 1,
+                    timestamp: Date.now()
+                };
+                
+                const tables = [
+                    'chats', 'worldBooks', 'userStickers', 'apiConfig', 'globalSettings',
+                    'personaPresets', 'musicLibrary', 'qzoneSettings', 'qzonePosts',
+                    'qzoneAlbums', 'qzonePhotos', 'favorites', 'qzoneGroups',
+                    'memories', 'worldBookCategories', 'apiPresets', 'shoppingProducts', 
+                    'callRecords', 'renderingRules', 'doubanPosts', 'forumGroups', 
+                    'forumPosts', 'forumComments', 'forumCategories',
+                    'appearancePresets' // <-- 【核心新增】在这里添加外观预设表
+                ];
+
+                const promises = tables.map(async (tableName) => {
+                    if (db[tableName]) {
+                        const isSingleRecordTable = ['apiConfig', 'globalSettings', 'musicLibrary', 'qzoneSettings'].includes(tableName);
+                        backupData[tableName] = isSingleRecordTable ? await db[tableName].get('main') : await db[tableName].toArray();
+                    }
+                });
+
+                await Promise.all(promises);
+                
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+                const fileName = `EPhone-Full-Backup-${new Date().toISOString().split('T')[0]}.json`;
+
+                // --- 步骤 2: 【核心修复】智能判断并执行最合适的导出方式 ---
+
+                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                // 方案一：只在移动设备上尝试原生分享
+                if (isMobile && navigator.share && navigator.canShare) {
+                    const file = new File([blob], fileName, { type: 'application/json' });
+                    if (navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'EPhone 数据备份',
+                                text: '请将此备份文件妥善保存。',
+                            });
+                            return; // 分享成功，结束函数
+                        } catch (error) {
+                            if (error.name !== 'AbortError') {
+                                console.warn('原生分享失败，将尝试备用方案:', error);
+                            } else {
+                                console.log('用户取消了分享。');
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                // 方案二：适用于所有桌面浏览器和无法使用原生分享的移动设备
+                // 这是最经典和可靠的下载方式
+                if ('download' in document.createElement('a')) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link); // 兼容 Firefox
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    // 在桌面端，我们依然可以显示一个成功的提示
+                    if (!isMobile) {
+                        await showCustomAlert('导出成功', '已成功导出所有数据！');
+                    }
+                    return;
+                }
+
+                // 方案三：终极备用方案 (针对极老的浏览器或特殊的iOS场景)
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const dataUrl = 'data:text/json;charset=utf-8,' + encodeURIComponent(event.target.result);
+                    const newWindow = window.open(dataUrl, '_blank');
+                    if (!newWindow) {
+                        alert('无法打开新标签页，请检查浏览器设置并允许弹出窗口。');
+                    } else {
+                        alert('数据已在新标签页中打开。请手动操作：\n1. 全选 (Select All)\n2. 拷贝 (Copy)\n3. 粘贴到备忘录或文本编辑器中，并保存为.json文件。');
+                    }
+                };
+                reader.readAsText(blob);
+
+            } catch (error) {
+                console.error("导出数据时出错:", error);
+                await showCustomAlert('导出失败', `发生了一个错误: ${error.message}`);
+            }
+        }
         
         // ▼▼▼ 【这是导入函数修复版】 ▼▼▼
         async function importBackup(file) {
@@ -14269,6 +14373,10 @@ async function cleanupRedundantData() {
 					if (Array.isArray(data.forumComments)) await db.forumComments.bulkPut(data.forumComments);
 					if (Array.isArray(data.forumCategories)) await db.forumCategories.bulkPut(data.forumCategories);
                     // ▲▲▲ 新代码粘贴结束 ▲▲▲
+
+					// ▼▼▼ 【核心新增】在这里添加对外观预设的导入逻辑 ▼▼▼
+                    if (Array.isArray(data.appearancePresets)) await db.appearancePresets.bulkPut(data.appearancePresets);
+                    // ▲▲▲ 新增结束 ▲▲▲
 
                     if (data.apiConfig) await db.apiConfig.put(data.apiConfig);
                     if (data.globalSettings) await db.globalSettings.put(data.globalSettings);
@@ -34577,6 +34685,30 @@ async function populateFanficSelectors() {
     }
 }
 
+
+/**
+         * 【全新】处理通过URL上传对方头像
+         */
+        async function handleUploadAiAvatarFromUrl() {
+            const url = await showCustomPrompt("网络图片", "请输入对方头像的图片URL", "", "url");
+            if (url && url.trim().startsWith('http')) {
+                document.getElementById('ai-avatar-preview').src = url.trim();
+            } else if (url !== null) {
+                alert("请输入一个有效的URL！");
+            }
+        }
+
+        /**
+         * 【全新】处理通过URL上传我的头像
+         */
+        async function handleUploadMyAvatarFromUrl() {
+            const url = await showCustomPrompt("网络图片", "请输入我的头像的图片URL", "", "url");
+            if (url && url.trim().startsWith('http')) {
+                document.getElementById('my-avatar-preview').src = url.trim();
+            } else if (url !== null) {
+                alert("请输入一个有效的URL！");
+            }
+        }
               // ===================================================================
                 // 4. 初始化函数 init()
                 // ===================================================================
@@ -34841,6 +34973,9 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
                     // --- 各种事件监听器 ---
                     // ==========================================================
 					// ▼▼▼ 【全新 | 转载功能 V2.0】请将这整块代码粘贴到 init() 的事件监听器区域 ▼▼▼
+
+					document.getElementById('upload-ai-avatar-url-btn').addEventListener('click', handleUploadAiAvatarFromUrl);
+        document.getElementById('upload-my-avatar-url-btn').addEventListener('click', handleUploadMyAvatarFromUrl);
 
 // 1. 为帖子详情页的“转载”按钮绑定【总入口】函数
 document.getElementById('repost-to-chat-btn').addEventListener('click', openRepostTargetPicker);
@@ -35231,7 +35366,7 @@ document.getElementById('trigger-fanfic-generation-btn').addEventListener('click
         // ▲▲▲ 粘贴结束 ▲▲▲
                     document.getElementById('custom-modal-cancel').addEventListener('click', hideCustomModal);
                     document.getElementById('custom-modal-overlay').addEventListener('click', (e) => { if (e.target === modalOverlay) hideCustomModal(); });
-                    document.getElementById('export-data-btn').addEventListener('click', exportBackup);
+                    document.getElementById('export-data-btn').addEventListener('click', exportData);
 // ▼▼▼ 在这里粘贴下面的新代码 ▼▼▼
 document.getElementById('cleanup-data-btn').addEventListener('click', cleanupRedundantData);
 // ▲▲▲ 粘贴结束 ▲▲▲

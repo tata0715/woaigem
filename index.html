@@ -16755,11 +16755,29 @@ async function renderChatList() {
         ${chat.members.map(m => `- ${m.groupNickname} (本名: ${m.originalName}): ${m.persona}`).join('\n')}
         现在，请为所有AI角色做出决策。`;
                     } else {
+
+						// 【【【新增！！！】】】 获取长期记忆
+						const longTermMemoryContext = (chat.longTermMemory && chat.longTermMemory.length > 0)
+							? `# 你的长期记忆 (这是你们关系和过去经历的核心)\n${chat.longTermMemory.map(mem => `- ${mem.content}`).join('\n')}`
+							: '';
+						// 1. 【核心修复】获取最近的10条聊天记录作为决策上下文
+						const recentHistory = chat.history.slice(-10).map(msg => {
+							const sender = msg.role === 'user' ? (chat.settings.myNickname || '我') : chat.name;
+							return `${sender}: ${String(msg.content)}`;
+						}).join('\n');
                         callDecisionPrompt = `
         # 你的任务
         用户刚刚向你发起了视频通话。请根据你的角色设定，决定是“接受”还是“拒绝”。
         # 你的角色设定
         ${chat.settings.aiPersona}
+		# 用户的角色设定
+		${chat.settings.myPersona}
+
+		# 你和用户的长期记忆
+		${longTermMemoryContext}
+
+		# 最近对话上下文 (这是你决策的关键依据！)
+		${recentHistory}
         # 核心规则
         你的回复【必须且只能】是以下两种格式之一的JSON数组，绝对不能回复任何其他内容：
         - 接受: '[{"type": "video_call_response", "decision": "accept"}]'
@@ -16867,6 +16885,7 @@ async function renderChatList() {
         你现在是角色“${chat.name}”。用户之前被你拉黑了，现在TA向你发送了好友申请，希望和好。
         # 供你决策的上下文信息:
         - **你的角色设定**: ${chat.settings.aiPersona}
+		- **用户的角色设定**: ${chat.settings.myPersona}
         - **用户发送的申请理由**: “${chat.relationship.applicationReason}”
         - **被拉黑前的最后对话摘要**: 
         ${contextSummary || "（无有效对话记录）"}
@@ -22252,17 +22271,31 @@ async function endVideoCall() {
         现在，请根据【通话前摘要】和下面的【通话实时记录】，继续进行对话。
         `;
             } else { 
+
+				// 【【【新增！！！】】】 获取长期记忆
+				const longTermMemoryContext = (chat.longTermMemory && chat.longTermMemory.length > 0)
+					? `# 你的长期记忆 (这是你们关系和过去经历的核心)\n${chat.longTermMemory.map(mem => `- ${mem.content}`).join('\n')}`
+					: '';
+
                 let openingContext = videoCallState.initiator === 'user'
                     ? `你刚刚接听了用户的视频通话请求。`
                     : `用户刚刚接听了你主动发起的视频通话。`;
                 inCallPrompt = `
-        # 你的任务
-        你现在是一个场景描述引擎。你的任务是扮演 ${chat.name} (${chat.settings.aiPersona})，并以【第三人称旁观视角】来描述TA在视频通话中的所有动作和语言。
-        # 核心规则
-        1.  **【【【视角铁律】】】**: 你的回复【绝对不能】使用第一人称“我”。必须使用第三人称，如“他”、“她”、或直接使用角色名“${chat.name}”。
-        2.  **格式**: 你的回复【必须】是一段描述性的文本。
-        # 当前情景
-        你正在和用户（${userNickname}，人设: ${chat.settings.myPersona}）进行视频通话。
+		# 你的任务
+		你现在是一个场景描述引擎。你的任务是扮演 ${chat.name}，并以【第三人称旁观视角】来描述TA在视频通话中的所有动作和语言。
+		# 核心规则
+		1.  **视角铁律**: 你的回复【绝对不能】使用第一人称“我”。必须使用第三人称，如“他”、“她”、或直接使用角色名“${chat.name}”。
+		2.  **格式**: 你的回复【必须】是一段描述性的文本。
+		
+		# 你的角色档案 (至关重要！)
+		- **人设**: ${chat.settings.aiPersona}
+		- **长期记忆**: ${longTermMemoryContext}
+
+		# 用户的角色档案
+		${userNickname}: ${chat.settings.myPersona}
+
+		# 当前情景
+        你正在和用户（${userNickname}）进行视频通话。
         **${openingContext}**
         **通话前的聊天摘要 (这是你们通话的原因，至关重要！)**:
         ${videoCallState.preCallContext}
@@ -24521,18 +24554,23 @@ async function summarizeCallTranscript(chatId, transcriptText) {
 
     const userNickname = state.qzoneSettings.nickname || '用户';
 
+    // ▼▼▼ 【终极修复 V2 | 放弃JSON】▼▼▼
     const systemPrompt = `
 # 你的任务
 你是一个对话摘要专家。你的唯一任务是阅读下面的【视频通话记录】，并将其浓缩成【一段】流畅、连贯、客观、并且【极其精简】的摘要。
-# 核心规则
-1.  **【长度铁律】**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
-2.  **客观事实**: 只记录通话中发生的最关键的事实、确认的约定或角色的核心情感变化。
-3.  **第三人称与命名**: 必须使用第三人称。请严格使用“${userNickname}”（代表用户）和“${chat.originalName}”（代表AI角色）来指代对话双方。
-4.  **输出格式**: 你的回复【必须且只能】是一个JSON对象，格式如下：
-    \`{"summary": "在这里写下你总结好的摘要。"}\`
+
+# 核心规则 (必须严格遵守！)
+1.  **【【【长度铁律】】】**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
+2.  **【客观事实】**: 只记录通话中发生的最关键的事实、确认的约定或角色的核心情感变化。
+3.  **【第三人称与命名】**: 必须使用第三人称。请严格使用“${userNickname}”（代表用户）和“${chat.originalName}”（代表AI角色）来指代对话双方。
+4.  **【【【输出格式铁律】】】**: 你的回复【必须且只能】是总结好的【纯文本摘要内容】，绝对不要包含任何JSON格式、引号、或者 "summary": 等字样。
+
 # 待总结的视频通话记录
 ${transcriptText}
-现在，请开始你的总结工作。`;
+
+现在，请严格遵守以上所有规则，直接输出那段不超过80个字的摘要文本。
+`;
+    // ▲▲▲ 修复结束 ▲▲▲
 
     // ▲▲▲ 核心修改从这里开始 ▲▲▲
     try {
@@ -24554,7 +24592,7 @@ ${transcriptText}
                 body: JSON.stringify({
                     model: model,
                     messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: "请开始总结。"}],
-                    temperature: 0.1, max_tokens: 150
+                    temperature: 0.1, max_tokens: 500
                 })
             });
 
@@ -24563,79 +24601,91 @@ ${transcriptText}
              throw new Error(`API 请求失败: ${response.status} - ${errorData.error.message}`);
         }
         
-        const data = await response.json();
-        let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
-        rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
-        const result = JSON.parse(rawContent);
+   // ▼▼▼ 【终极修复 V2 | 纯文本处理逻辑】▼▼▼
+    const data = await response.json();
+    const summaryText = (isGemini ? getGeminiResponseText(data) : data.choices[0].message.content).trim();
+    
+    console.log("通话总结时，AI返回的原始响应 (纯文本):\n---", summaryText, "\n---");
 
-        if (result.summary && result.summary.trim()) {
-            const newMemoryEntry = {
-                content: `(在那次视频通话中，${result.summary.trim()})`,
-                timestamp: Date.now(),
-                source: 'call_summary'
-            };
-            chat.longTermMemory.push(newMemoryEntry);
-            await db.chats.put(chat);
-            console.log("通话记录已成功总结并存入长期记忆:", newMemoryEntry.content);
-            return true; // 明确返回成功状态
-        } else {
-            throw new Error("AI返回了空的或格式不正确的总结内容。");
+    // 【关键】直接检查纯文本摘要的有效性
+    if (summaryText && summaryText.length >= 10) { // 要求摘要至少有10个字符
+        const newMemoryEntry = {
+            content: `(在那次视频通话中，${summaryText})`,
+            timestamp: Date.now(),
+            source: 'call_summary'
+        };
+        
+        if (!chat.longTermMemory) {
+            chat.longTermMemory = [];
         }
+        
+        chat.longTermMemory.push(newMemoryEntry);
+        await db.chats.put(chat);
+        console.log("通话总结成功！存入长期记忆:", newMemoryEntry.content);
+        return true;
+    } else {
+        // 如果AI返回空内容或太短，就抛出错误
+        throw new Error(`AI返回了空的或过短的总结内容。原始返回: "${summaryText}"`);
+    }
+    // ▲▲▲ 修复结束 ▲▲▲
 
     } catch (error) {
         console.error("总结通话记录时出错:", error);
-        // 这是最关键的修改：将捕获到的错误重新抛出！
         throw error;
     }
-    // ▲▲▲ 核心修改到这里结束 ▲▲▲
 }
-// ▼▼▼ 【全新 | V3.0 终极容错版】请用这一整块代码，完整替换旧的 summarizeExistingLongTermMemory 函数 ▼▼▼
+// ▲▲▲ 终极修复结束 ▲▲▲
 
+
+// ▼▼▼ 【终极智能版 | V2.0】robustJsonParse 函数 ▼▼▼
 /**
- * 【辅助函数 | 容错核心】一个更健壮的JSON解析器
- * 它能从AI返回的、可能不规范的文本中智能提取JSON对象或核心内容。
- * @param {string} rawContent - AI返回的原始字符串
- * @returns {object|null} - 返回解析后的对象，或在完全失败时返回null
+ * 【辅助函数 | 容错核心 V2.0】一个更智能的JSON解析器
+ * 它能从AI返回的文本中提取JSON，并能智能清洗掉残留的语法符号。
  */
 function robustJsonParse(rawContent) {
-    if (!rawContent || typeof rawContent !== 'string') {
-        return null;
-    }
+    if (!rawContent || typeof rawContent !== 'string') return null;
 
-    const cleanedContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+    // 1. 基础清洗：移除Markdown代码块标记和首尾空白
+    let cleanedContent = rawContent.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
 
-    // 策略1：最高优先级，尝试直接解析完整的JSON对象
-    // 这能处理最标准的情况，以及AI在JSON前后添加了少量文字的情况。
-    const jsonMatch = cleanedContent.match(/{[\s\S]*}/);
+    // 2. 策略1：尝试提取并解析完整的JSON对象
+    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         try {
             const parsed = JSON.parse(jsonMatch[0]);
-            console.log("容错解析：策略1成功 (找到并解析了完整的JSON对象)");
-            return parsed;
-        } catch (e) {
-            console.warn("容错解析：策略1失败 (找到了JSON块，但格式错误)，将尝试策略2...");
-        }
+            // 只有当解析出的对象包含非空的 summary 字段时才认为是成功的
+            if (parsed && parsed.summary && typeof parsed.summary === 'string' && parsed.summary.trim()) {
+                console.log("容错解析：策略1成功 (完整JSON)");
+                return parsed;
+            }
+        } catch (e) { /* 解析失败，继续 */ }
     }
 
-    // 策略2：如果策略1失败，尝试只提取 "summary" 字段的内容
-    // 这能处理AI返回了类似 "summary": "..." 这样的非标准格式
+    // 3. 策略2：尝试直接提取 "summary": "..." 格式的内容
     const summaryMatch = cleanedContent.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
     if (summaryMatch && summaryMatch[1]) {
-        console.log("容错解析：策略2成功 (提取了summary字段内容)");
-        // 手动构建一个符合我们期望格式的对象
-        return { summary: summaryMatch[1].replace(/\\"/g, '"') }; // 处理转义的引号
+        console.log("容错解析：策略2成功 (提取字段)");
+        return { summary: summaryMatch[1].replace(/\\"/g, '"') };
     }
     
-    // 策略3：最终备用方案，如果以上都失败了，就认为整个文本都是摘要
-    // 这能处理AI完全不听指令，直接返回纯文本的情况
-    if (cleanedContent) {
-        console.log("容错解析：策略3成功 (将整个返回文本作为摘要)");
-        return { summary: cleanedContent };
+    // 4. 策略3：【终极保底】将原始文本作为摘要，但进行深度的清洗
+    console.log("容错解析：策略3启动 (清洗原文作为摘要)");
+    
+    // 4.1. 移除开头可能的 '{'、'"summary":'、'"' 等残留
+    cleanedContent = cleanedContent.replace(/^[\s{"summary:]+/, '');
+    // 4.2. 移除结尾可能的 '}'、'"' 等残留
+    cleanedContent = cleanedContent.replace(/[\s}"]+$/, '');
+    
+    // 4.3. 最终检查：如果清洗后还有内容，就返回
+    if (cleanedContent.trim().length > 0) {
+        return { summary: cleanedContent.trim() };
     }
 
-    // 如果连文本都没有，才返回null
+    // 如果所有尝试都失败，返回null
+    console.warn("容错解析：所有策略均失败。");
     return null;
 }
+// ▲▲▲ 修复结束 ▲▲▲
 
 
         /**
@@ -24935,79 +24985,7 @@ ${formattedHistory}
         await showCustomAlert('总结失败', `操作失败: ${error.message}`);
     }
 }
-/**
- * 【全新】专门用于总结通话记录并存入长期记忆的核心函数
- * @param {string} chatId - 目标聊天的ID
- * @param {string} transcriptText - 格式化后的通话文字记录
- */
-async function summarizeCallTranscript(chatId, transcriptText) {
-    const chat = state.chats[chatId];
-    if (!chat || !transcriptText) return;
 
-    const userNickname = state.qzoneSettings.nickname || '用户';
-
-    // 使用与常规总结完全相同的、高度优化的指令
-    const systemPrompt = `
-# 你的任务
-你是一个对话摘要专家。你的唯一任务是阅读下面的【视频通话记录】，并将其浓缩成【一段】流畅、连贯、客观、并且【极其精简】的摘要。
-
-# 核心规则
-1.  **【长度铁律】**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
-2.  **客观事实**: 只记录通话中发生的最关键的事实、确认的约定或角色的核心情感变化。
-3.  **第三人称与命名**: 必须使用第三人称。请严格使用“${userNickname}”和“${chat.originalName}”来指代对话双方。
-4.  **输出格式**: 你的回复【必须且只能】是一个JSON对象，格式如下：
-    \`{"summary": "在这里写下你总结好的摘要。"}\`
-
-# 待总结的视频通话记录
-${transcriptText}
-
-现在，请开始你的总结工作。`;
-
-    try {
-        const { proxyUrl, apiKey, model } = state.apiConfig.secondaryProxyUrl ? 
-            { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel } : 
-            state.apiConfig;
-
-        if (!proxyUrl || !apiKey || !model) throw new Error('API未配置');
-
-        let isGemini = proxyUrl.includes('generativelanguage');
-        let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, [{ role: 'user', content: "请开始总结。" }]);
-
-        const response = isGemini 
-            ? await fetch(geminiConfig.url, geminiConfig.data) 
-            : await fetch(`${proxyUrl}/v1/chat/completions`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`},
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: "请开始总结。"}],
-                    temperature: 0.1, max_tokens: 150
-                })
-            });
-
-        if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
-        
-        const data = await response.json();
-        let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
-        rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
-        const result = JSON.parse(rawContent);
-
-        if (result.summary && result.summary.trim()) {
-            const newMemoryEntry = {
-                content: `(在那次视频通话中，${result.summary.trim()})`, // 添加前缀以明示来源
-                timestamp: Date.now(),
-                source: 'call_summary'
-            };
-            chat.longTermMemory.push(newMemoryEntry);
-            await db.chats.put(chat);
-            console.log("通话记录已成功总结并存入长期记忆:", newMemoryEntry.content);
-        }
-
-    } catch (error) {
-        console.error("总结通话记录时出错:", error);
-        // 静默失败，不打扰用户，但会在控制台留下记录
-    }
-}
         // ▼▼▼ 【全新】引用回复功能函数 ▼▼▼
         
         function startReplyToMessage() {

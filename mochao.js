@@ -83,6 +83,38 @@ function showCustomConfirm(title, message, options = {}) {
     });
 }
 
+
+// ▼▼▼ 【终极修复 V3 | showCustomAlert 完整版】 ▼▼▼
+function showCustomAlert(title, message) {
+    return new Promise(resolve => {
+        // 【【【这就是缺失的关键代码！！！】】】
+        const modalOverlay = document.getElementById('custom-modal-overlay');
+        const modalTitle = document.getElementById('custom-modal-title');
+        const modalBody = document.getElementById('custom-modal-body');
+        const confirmBtn = document.getElementById('custom-modal-confirm');
+        const cancelBtn = document.getElementById('custom-modal-cancel');
+        // 【【【修复结束】】】
+
+        modalTitle.textContent = title;
+        modalBody.innerHTML = `<p style="text-align: left; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</p>`;
+        cancelBtn.style.display = 'none';
+        confirmBtn.textContent = '好的';
+
+        // 使用克隆节点技巧，确保每次绑定的都是新事件
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        newConfirmBtn.onclick = () => {
+            modalOverlay.classList.remove('visible');
+            cancelBtn.style.display = 'block'; // 恢复取消按钮，为其他弹窗做准备
+            resolve(true); 
+        };
+        modalOverlay.classList.add('visible');
+    });
+}
+// ▲▲▲ 终极修复结束 ▲▲▲
+
+// ▼▼▼ 【终极修复】彻底重写 showCustomPrompt 函数以支持 textarea ▼▼▼
 function showCustomPrompt(title, placeholder, initialValue = '', type = 'text') {
     return new Promise(resolve => {
         const modalOverlay = document.getElementById('custom-modal-overlay');
@@ -93,10 +125,23 @@ function showCustomPrompt(title, placeholder, initialValue = '', type = 'text') 
         
         const inputId = 'custom-prompt-input';
         modalTitle.textContent = title;
-        modalBody.innerHTML = `<input type="${type}" id="${inputId}" placeholder="${placeholder}" value="${initialValue}">`;
+
+        // 【【【核心修复逻辑！！！】】】
+        let inputHtml = '';
+        if (type === 'textarea') {
+            // 如果类型是 'textarea'，就生成一个 <textarea> 标签
+            inputHtml = `<textarea id="${inputId}" placeholder="${placeholder}" rows="6" style="width: 100%; min-height: 150px; resize: vertical; border: 1px solid #ccc; border-radius: 6px; padding: 8px; font-size: 16px; box-sizing: border-box;">${initialValue}</textarea>`;
+        } else {
+            // 否则，才生成 <input> 标签
+            inputHtml = `<input type="${type}" id="${inputId}" placeholder="${placeholder}" value="${initialValue}">`;
+        }
+        
+        modalBody.innerHTML = inputHtml;
+        // 【【【修复结束】】】
         
         const input = document.getElementById(inputId);
 
+        // 重新绑定事件，防止旧监听器残留
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
         const newCancelBtn = cancelBtn.cloneNode(true);
@@ -109,6 +154,7 @@ function showCustomPrompt(title, placeholder, initialValue = '', type = 'text') 
         setTimeout(() => input.focus(), 100);
     });
 }
+// ▲▲▲ 终极修复结束 ▲▲▲
 
 function showChoiceModal(title, options) {
     return new Promise(resolve => {
@@ -151,25 +197,29 @@ function injectMochaoHTML() {
     const mochaoAppHTML = `
         <!-- ▼▼▼ 【全新】这是“墨巢”App的【全部HTML屏幕】 ▼▼▼ -->
 
-        <!-- 1. 书架主屏幕 -->
-        <div id="mochao-bookshelf-screen" class="screen">
-            <div class="header">
-                <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
-                <span>墨巢</span>
-                <div class="header-actions">
-                    <span class="action-btn" id="mochao-import-txt-btn" title="导入TXT">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    </span>
-                </div>
-            </div>
-            <div id="mochao-bookshelf-list" class="list-container">
-                <!-- 书本卡片将由JS动态生成 -->
-            </div>
-            <button id="mochao-create-book-btn" class="form-button" style="position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 50%; font-size: 32px; padding: 0; line-height: 56px;">+</button>
-        </div>
-
+		<!-- ▼▼▼ 【修复1.A | 终极版】修正书架页HTML结构 ▼▼▼ -->
+		<!-- 1. 书架主屏幕 -->
+		<div id="mochao-bookshelf-screen" class="screen mochao-app-screen">
+			<div class="header">
+				<span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+				<span>墨巢</span>
+				<div class="header-actions">
+					<!-- 【核心】将所有按钮都预置在这里 -->
+					<span class="action-btn" id="mochao-filter-btn" title="筛选">🔍</span>
+					<span class="action-btn" id="mochao-import-txt-btn" title="导入TXT">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+					</span>
+					<span class="action-btn" id="mochao-settings-btn" title="墨巢设置">⚙️</span>
+				</div>
+			</div>
+			<div id="mochao-bookshelf-list" class="list-container">
+				<!-- 书本卡片将由JS动态生成 -->
+			</div>
+			<button id="mochao-create-book-btn" class="form-button" style="position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 50%; font-size: 32px; padding: 0; line-height: 56px;">+</button>
+		</div>
+		<!-- ▲▲▲ 修复结束 ▲▲▲ -->
         <!-- 2. 章节列表页 (V1.1版，已添加管理功能) -->
-		<div id="mochao-chapter-list-screen" class="screen">
+		<div id="mochao-chapter-list-screen" class="screen mochao-app-screen">
 			<div class="header">
 				<span class="back-btn" id="mochao-back-to-bookshelf-btn">‹</span>
 				<span id="mochao-chapter-list-title">书本名称</span>
@@ -187,7 +237,7 @@ function injectMochaoHTML() {
 
         <!-- 3. 章节编辑页 -->
         <!-- 3. 章节编辑页 (V1.1版) -->
-		<div id="mochao-chapter-editor-screen" class="screen">
+		<div id="mochao-chapter-editor-screen" class="screen mochao-app-screen">
 			<div class="header">
 				<span class="back-btn" id="editor-close-btn">关闭</span>
 				<span id="editor-header-title">编辑章节</span>
@@ -230,7 +280,7 @@ function injectMochaoHTML() {
 		</div>
 
         <!-- 4. 章节阅读页 -->
-        <div id="mochao-chapter-reader-screen" class="screen">
+        <div id="mochao-chapter-reader-screen" class="screen mochao-app-screen">
             <div class="header">
                 <span class="back-btn" id="reader-back-btn">‹ 目录</span>
                 <div class="header-actions">
@@ -260,99 +310,219 @@ function injectMochaoHTML() {
 			<!-- ▲▲▲ 新增结束 ▲▲▲ -->
         </div>
 
-        <!-- ▼▼▼ “墨巢”App专属的模态框 ▼▼▼ -->
-        <!-- ▼▼▼ 【修复2.A】全新V3版书本编辑器（补完所有字段） ▼▼▼ -->
-<div id="mochao-book-editor-modal" class="modal">
-    <div class="modal-content" style="height: 90%;">
-        <div class="modal-header">
-            <span id="book-editor-title">创建新书</span>
-            <button id="mochao-book-editor-modal-close" style="background:none; border:none; font-size: 24px; cursor: pointer;">×</button>
-        </div>
-        <div class="modal-body" style="display: flex; flex-direction: column;">
-            <div class="form-group">
-                <label for="book-name-input">书名</label>
-                <input type="text" id="book-name-input" placeholder="请输入书名...">
-            </div>
-            <div class="form-group">
-                <label for="book-author-input">作者名</label>
-                <input type="text" id="book-author-input" placeholder="请输入作者笔名...">
-            </div>
-            <div class="form-group">
-                <label for="book-author-persona-input">作者设定</label>
-                <textarea id="book-author-persona-input" rows="2" placeholder="例如：一个喜欢挖坑的悬疑作家..."></textarea>
-            </div>
-            <div class="form-group">
-                <label for="book-tags-input">类型/标签 (用逗号分隔)</label>
-                <input type="text" id="book-tags-input" placeholder="例如: 科幻, 爱情, ABO">
-            </div>
-            <div class="form-group">
-                <label for="book-style-prompt-input">文风</label>
-                <textarea id="book-style-prompt-input" rows="3" placeholder="例如：语言风格简洁、有力，多用短句..."></textarea>
-            </div>
-            <div class="form-group">
-                <label for="book-synopsis-input">简介</label>
-                <textarea id="book-synopsis-input" rows="3" placeholder="简单介绍一下你的故事..."></textarea>
-            </div>
+				<!-- ▼▼▼ “墨巢”App专属的模态框 ▼▼▼ -->
+				<!-- ▼▼▼ 【修复2.A】全新V3版书本编辑器（补完所有字段） ▼▼▼ -->
+		<div id="mochao-book-editor-modal" class="modal">
+			<div class="modal-content" style="height: 90%;">
+				<div class="modal-header">
+					<span id="book-editor-title">创建新书</span>
+					<button id="mochao-book-editor-modal-close" style="background:none; border:none; font-size: 24px; cursor: pointer;">×</button>
+				</div>
+				<div class="modal-body" style="display: flex; flex-direction: column;">
+					<div class="form-group">
+						<label for="book-name-input">书名</label>
+						<input type="text" id="book-name-input" placeholder="请输入书名...">
+					</div>
+					<div class="form-group">
+						<label for="book-author-input">作者名</label>
+						<input type="text" id="book-author-input" placeholder="请输入作者笔名...">
+					</div>
+					<div class="form-group">
+						<label for="book-author-persona-input">作者设定</label>
+						<textarea id="book-author-persona-input" rows="2" placeholder="例如：一个喜欢挖坑的悬疑作家..."></textarea>
+					</div>
+					<!-- 标签选择 -->
+					<div class="form-group">
+						<label>类型/标签</label>
+						<div class="custom-multiselect" id="book-tags-selector">
+							<div class="select-box">
+								<span class="selected-options-text">-- 点击选择或输入新标签 --</span>
+								<span class="arrow-down">▼</span>
+							</div>
+							<div class="checkboxes-container"></div>
+						</div>
+					</div>
+					<!-- 文风选择 -->
+					<div class="form-group">
+						<label for="book-style-prompt-select">文风</label>
+						<select id="book-style-prompt-select">
+							<option value="">-- 选择一个预设 --</option>
+							<option value="custom">自定义...</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="book-synopsis-input">简介</label>
+						<textarea id="book-synopsis-input" rows="3" placeholder="简单介绍一下你的故事..."></textarea>
+					</div>
 
-            <!-- 主要人物 -->
-            <div class="form-group">
-                <label style="display:flex; justify-content: space-between; align-items: center;">
-                    <span>主要人物</span>
-                    <button class="form-button-secondary" id="ai-generate-characters-btn" style="margin:0; padding: 4px 8px; font-size: 12px;">👤 AI生成</button>
-                </label>
-                <div id="book-characters-list" style="max-height: 120px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 8px;"></div>
-                <button id="add-character-btn" class="form-button form-button-secondary" style="margin-top: 10px;">+ 手动添加人物</button>
-            </div>
+					<!-- 主要人物 -->
+					<div class="form-group">
+						<label style="display:flex; justify-content: space-between; align-items: center;">
+							<span>主要人物</span>
+							<button class="form-button-secondary" id="ai-generate-characters-btn" style="margin:0; padding: 4px 8px; font-size: 12px;">👤 AI生成</button>
+						</label>
+						<div id="book-characters-list" style="max-height: 120px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 8px;"></div>
+						<button id="add-character-btn" class="form-button form-button-secondary" style="margin-top: 10px;">+ 手动添加人物</button>
+					</div>
 
-            <!-- 故事大纲 -->
-            <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
-                <label style="display:flex; justify-content: space-between; align-items: center;">
-                    <span>故事大纲</span>
-                    <button class="form-button-secondary" id="ai-generate-outline-btn" style="margin:0; padding: 4px 8px; font-size: 12px;">🔄 AI生成/更新</button>
-                </label>
-                <textarea id="book-outline-input" style="flex-grow: 1;" placeholder="大纲将由AI根据章节摘要生成，您也可以在此手动编辑..."></textarea>
-            </div>
-        </div>
-        <div class="modal-footer" style="flex-direction: column; gap: 10px;">
-            <button class="form-button form-button-secondary" id="book-ai-magic-btn">✨ AI魔法棒 (一键完善所有空白信息)</button>
-            <button class="save" id="book-editor-save-btn">保存书本</button>
-        </div>
-    </div>
-</div>
-<!-- ▲▲▲ 修复结束 ▲▲▲ -->
+					<!-- 故事大纲 -->
+					<div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+						<label style="display:flex; justify-content: space-between; align-items: center;">
+							<span>故事大纲</span>
+							<button class="form-button-secondary" id="ai-generate-outline-btn" style="margin:0; padding: 4px 8px; font-size: 12px;">🔄 AI生成/更新</button>
+						</label>
+						<textarea id="book-outline-input" style="flex-grow: 1;" placeholder="大纲将由AI根据章节摘要生成，您也可以在此手动编辑..."></textarea>
+					</div>
+				</div>
+				<div class="modal-footer" style="flex-direction: column; gap: 10px;">
+					<button class="form-button form-button-secondary" id="book-ai-magic-btn">✨ AI魔法棒 (一键完善所有空白信息)</button>
+					<button class="save" id="book-editor-save-btn">保存书本</button>
+				</div>
+			</div>
+		</div>
+		<!-- ▲▲▲ 修复结束 ▲▲▲ -->
 
-        <!-- ▼▼▼ 【修复3】外观设置弹窗（带独立预览区）▼▼▼ -->
-<div id="mochao-appearance-modal" class="modal">
-    <div class="modal-content" style="height: auto;">
-        <div class="modal-header">
-            <span>阅读外观设置</span>
-            <button id="appearance-modal-close-btn" style="background:none; border:none; font-size: 24px; cursor: pointer;">×</button>
-        </div>
-        <div class="modal-body">
-            <!-- 独立的预览区域 -->
-            <div id="mochao-appearance-preview" style="padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; transition: all 0.3s ease;">
-                <p style="margin:0;">这是字体大小和背景预览。</p>
-            </div>
-            <div class="form-group">
-                <label for="appearance-font-size-slider">字体大小 <span id="appearance-font-size-value">16px</span></label>
-                <input type="range" id="appearance-font-size-slider" min="12" max="24" step="1" value="16">
-            </div>
-            <div class="form-group">
-                <label>背景颜色</label>
-                <div class="appearance-bg-selector">
-                    <div class="bg-color-option" data-color="#FDFBF5" style="background-color: #FDFBF5;"></div>
-                    <div class="bg-color-option" data-color="#E3EDD8" style="background-color: #E3EDD8;"></div>
-                    <div class="bg-color-option" data-color="#F5F5F5" style="background-color: #F5F5F5;"></div>
-                    <div class="bg-color-option" data-color="#2E2E2E" style="background-color: #2E2E2E;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="save" id="appearance-save-btn">保存设置</button>
-        </div>
-    </div>
-</div>
-<!-- ▲▲▲ 修复结束 ▲▲▲ -->
+				<!-- ▼▼▼ 【修复3】外观设置弹窗（带独立预览区）▼▼▼ -->
+		<div id="mochao-appearance-modal" class="modal">
+			<div class="modal-content" style="height: auto;">
+				<div class="modal-header">
+					<span>阅读外观设置</span>
+					<button id="appearance-modal-close-btn" style="background:none; border:none; font-size: 24px; cursor: pointer;">×</button>
+				</div>
+				<div class="modal-body">
+					<!-- 独立的预览区域 -->
+					<div id="mochao-appearance-preview" style="padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; transition: all 0.3s ease;">
+						<p style="margin:0;">这是字体大小和背景预览。</p>
+					</div>
+					<div class="form-group">
+						<label for="appearance-font-size-slider">字体大小 <span id="appearance-font-size-value">16px</span></label>
+						<input type="range" id="appearance-font-size-slider" min="12" max="24" step="1" value="16">
+					</div>
+					<div class="form-group">
+						<label>背景颜色</label>
+						<div class="appearance-bg-selector">
+							<div class="bg-color-option" data-color="#FDFBF5" style="background-color: #FDFBF5;"></div>
+							<div class="bg-color-option" data-color="#E3EDD8" style="background-color: #E3EDD8;"></div>
+							<div class="bg-color-option" data-color="#F5F5F5" style="background-color: #F5F5F5;"></div>
+							<div class="bg-color-option" data-color="#2E2E2E" style="background-color: #2E2E2E;"></div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="save" id="appearance-save-btn">保存设置</button>
+				</div>
+			</div>
+		</div>
+		<!-- ▲▲▲ 修复结束 ▲▲▲ -->
+
+		<!-- ▼▼▼ 【任务3.5 & 4.A】新增“设置页”和“筛选弹窗”的HTML ▼▼▼ -->
+
+		<!-- 5. 墨巢专属设置页 -->
+		<div id="mochao-settings-screen" class="screen mochao-app-screen">
+			<div class="header">
+				<span class="back-btn" id="mochao-settings-back-btn">‹</span>
+				<span>墨巢设置</span>
+				<span class="save-btn" id="mochao-settings-save-btn">保存</span>
+			</div>
+			<div class="form-container" style="padding: 15px;">
+				<h3 class="settings-header">外观设置</h3>
+				<div class="form-group">
+					<label for="mochao-theme-select">主题模式</label>
+					<select id="mochao-theme-select">
+						<option value="light">日间模式</option>
+						<option value="dark">夜间模式</option>
+						<option value="system">跟随系统</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label for="mochao-font-url-input">全局阅读字体 URL (.ttf, .woff)</label>
+					<input type="text" id="mochao-font-url-input" placeholder="留空则使用App默认字体">
+				</div>
+
+				<h3 class="settings-header">创作设置</h3>
+				<div class="form-group">
+					<label>文风预设管理</label>
+					<div id="mochao-style-presets-list"></div>
+					<div style="display: flex; gap: 10px; margin-top: 10px;">
+						<input type="text" id="new-style-preset-name-input" placeholder="预设名称 (如: 古龙风)" style="flex-grow: 1;">
+						<button id="add-style-preset-btn" class="form-button-secondary" style="margin:0; padding: 0 15px;">添加</button>
+					</div>
+				</div>
+				<div class="form-group">
+					<label>标签池管理</label>
+					<div id="mochao-tags-list"></div>
+					<div style="display: flex; gap: 10px; margin-top: 10px;">
+						<input type="text" id="new-tag-input" placeholder="输入新标签..." style="flex-grow: 1;">
+						<button id="add-tag-btn" class="form-button-secondary" style="margin:0; padding: 0 15px;">添加</button>
+					</div>
+				</div>
+
+				<h3 class="settings-header">数据管理</h3>
+				<div class="form-group" style="display: flex; gap: 10px;">
+					<button id="mochao-export-btn" class="form-button form-button-secondary" style="margin:0; flex: 1;">导出全部墨巢数据</button>
+					<button id="mochao-import-btn" class="form-button form-button-secondary" style="margin:0; flex: 1;">导入墨巢数据</button>
+					<input type="file" id="mochao-import-input" accept=".json" hidden>
+				</div>
+			</div>
+		</div>
+
+		<!-- 6. 标签筛选模态框 -->
+		<div id="mochao-filter-modal" class="modal">
+			<div class="modal-content" style="height: auto; max-height: 60%;">
+				<div class="modal-header">
+					<span>按标签筛选</span>
+				</div>
+				<div class="modal-body">
+					<div id="mochao-filter-tags-list" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 10px;">
+						<!-- 标签将由JS动态生成 -->
+					</div>
+				</div>
+				<div class="modal-footer" style="justify-content: space-between;">
+					<button class="cancel" id="mochao-filter-reset-btn" style="width: 30%;">重置</button>
+					<button class="cancel" id="mochao-filter-cancel-btn" style="width: 30%;">取消</button>
+					<button class="save" id="mochao-filter-apply-btn" style="width: 30%;">应用</button>
+				</div>
+			</div>
+		</div>
+
+
+		<!-- ▼▼▼ 【任务5.C | V3版终极简化】TXT导入与分章模态框 ▼▼▼ -->
+		<div id="mochao-import-txt-modal" class="modal">
+			<div class="modal-content" style="height: 90%; width: 95%;">
+				<div class="modal-header">
+					<span>TXT导入与分章</span>
+				</div>
+				<div class="modal-body" style="display: flex; flex-direction: column;">
+					<!-- 编码选择 -->
+					<div class="form-group" style="flex-shrink: 0;">
+						<label for="txt-encoding-select">第一步：选择编码格式</label>
+						<select id="txt-encoding-select">
+							<option value="utf-8">UTF-8 (通用)</option>
+							<option value="gbk">GBK (旧版TXT)</option>
+						</select>
+					</div>
+					<!-- 【核心修改】正则表达式输入框 -->
+					<div class="form-group" style="flex-shrink: 0;">
+						<label for="custom-split-rule-input">第二步：编辑分章规则 (正则表达式)</label>
+						<input type="text" id="custom-split-rule-input" placeholder="在此输入或修改用于识别章节标题的正则表达式...">
+						<p style="font-size: 12px; color: #888; margin-top: 5px;">实时预览结果: 已找到 <strong id="split-preview-count">0</strong> 个章节</p>
+						<!-- 【【【核心新增！！！】】】 -->
+						<button id="apply-split-rule-btn" class="form-button-secondary" style="margin:0; padding: 0 15px;">应用规则</button>
+					</div>
+					<!-- 预览区 -->
+					<div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+						<label>第三步：预览原文 (不可编辑)</label>
+						<textarea id="txt-preview-area" style="flex-grow: 1; width: 100%; font-size: 12px; background-color: #f0f2f5;" readonly></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="cancel" id="cancel-txt-import-btn">取消</button>
+					<button class="save" id="confirm-txt-import-btn">确认导入</button>
+				</div>
+			</div>
+		</div>
+		<input type="file" id="mochao-txt-file-input" accept=".txt" hidden>
+		<!-- ▲▲▲ 新增HTML结束 ▲▲▲ -->
 
         <!-- ▲▲▲ “墨巢”App HTML结束 ▲▲▲ -->
     `;
@@ -379,6 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeChapterId = null;
     let editingChapterId = null; // 区分是新建还是编辑章节
     let mochaoSettings = {}; // 存储墨巢App的专属设置
+	let activeMochaoFilters = [];
 
     // ===================================================================
     // 2. 核心功能函数
@@ -387,56 +558,179 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 渲染书架主屏幕
      */
-    // ▼▼▼ 【任务1.B】更新 renderBookshelf 函数以支持长按 ▼▼▼
+	// ▼▼▼ 【任务3.5 & 4.D】重构及新增所有相关JS函数 ▼▼▼
+
+	/**
+	 * 【V2版 | 支持筛选】渲染书架主屏幕
+	 */
 	async function renderBookshelf() {
 		const bookshelfEl = document.getElementById('mochao-bookshelf-list');
 		bookshelfEl.innerHTML = '';
-		const books = await db.books.orderBy('lastModified').reverse().toArray();
+		const allBooks = await db.books.orderBy('lastModified').reverse().toArray();
 
-		if (books.length === 0) {
-			bookshelfEl.innerHTML = '<p style="text-align:center; color: var(--text-secondary); padding: 50px 0;">书架空空如也，点击右下角“+”<br>开始创作你的第一本书吧！</p>';
-			return;
-		}
+		// 根据激活的筛选器过滤书本
+		const booksToRender = (activeMochaoFilters.length === 0)
+			? allBooks
+			: allBooks.filter(book => book.tags && book.tags.some(tag => activeMochaoFilters.includes(tag)));
 
-		for (const book of books) {
-			const wordCount = await db.chapters.where('bookId').equals(book.id).toArray().then(chapters =>
-				chapters.reduce((sum, chap) => sum + (chap.content || '').length, 0)
-			);
+		if (booksToRender.length === 0) {
+			const message = activeMochaoFilters.length > 0
+				? '没有找到符合筛选条件的书本'
+				: '书架空空如也，点击右下角“+”<br>开始创作你的第一本书吧！';
+			bookshelfEl.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 50px 0;">${message}</p>`;
+		} else {
+			// ▼▼▼ 【任务1 & BUG修复 | 终极版】在渲染时直接为每个元素绑定事件 ▼▼▼
+			for (const book of booksToRender) {
+				const wordCount = await db.chapters.where('bookId').equals(book.id).toArray().then(chapters =>
+					chapters.reduce((sum, chap) => sum + (chap.content || '').length, 0)
+				);
 
-			const item = document.createElement('div');
-			item.className = 'mochao-book-card';
-			item.dataset.bookId = book.id;
-			item.innerHTML = `
-				<div class="book-card-cover" style="background-image: url(${book.coverImage || 'https://i.postimg.cc/pT2xKzPz/album-cover-placeholder.png'})"></div>
-				<div class="book-card-info">
-					<h3 class="book-card-title">${book.name}</h3>
-					<p class="book-card-synopsis">${(book.synopsis || '暂无简介').substring(0, 40)}...</p>
-					<p class="book-card-meta">字数: ${wordCount}</p>
-				</div>
-			`;
-			
-			// ▼▼▼ 【修复1.B】使用全新的事件处理器 ▼▼▼
-			// 定义单击时要执行的操作
-			const clickAction = () => {
-				const bookId = parseInt(item.dataset.bookId);
-				renderChapterList(bookId);
-				showScreen('mochao-chapter-list-screen');
-			};
+				const item = document.createElement('div');
+				item.className = 'mochao-book-card';
+				item.dataset.bookId = book.id;
+				// ▼▼▼ 【优化4】增强书架卡片信息显示 ▼▼▼
+				const tagsHtml = (book.tags && book.tags.length > 0)
+					? `<div class="book-card-tags">${book.tags.map(tag => `<span>#${tag}</span>`).join(' ')}</div>`
+					: '';
 
-			// 定义长按时要执行的操作
-			const longPressAction = () => {
-				showBookActions(book.id, book.name);
-			};
+				item.innerHTML = `
+					<div class="book-card-cover" style="background-image: url(${book.coverImage || 'https://i.postimg.cc/pT2xKzPz/album-cover-placeholder.png'})"></div>
+					<div class="book-card-info">
+						<h3 class="book-card-title">${book.name}</h3>
+						<p class="book-card-author">${book.authorName || '匿名作者'}</p>
+						<p class="book-card-synopsis">${(book.synopsis || '暂无简介').substring(0, 30)}...</p>
+						${tagsHtml}
+						<p class="book-card-meta">字数: ${wordCount}</p>
+					</div>
+				`;
+				// ▲▲▲ 优化结束 ▲▲▲
 
-			// 使用新函数，将两种操作同时绑定到元素上
-			addClickAndLongPress(item, clickAction, longPressAction);
+				// 【【【核心修复！！！】】】
+				// 我们在这里为【每一个】新创建的卡片，独立绑定它自己的单击和长按事件。
+
+				// 1. 定义好这个卡片专属的单击操作
+				const clickAction = () => {
+					const bookId = parseInt(item.dataset.bookId);
+					renderChapterList(bookId);
+					showScreen('mochao-chapter-list-screen');
+				};
+				
+				// 2. 定义好这个卡片专属的长按操作
+				const longPressAction = () => {
+					const bookId = parseInt(item.dataset.bookId);
+					const bookName = item.querySelector('.book-card-title').textContent;
+					showBookActions(bookId, bookName);
+				};
+
+				// 3. 使用我们健壮的事件处理器，将两个操作绑定到这个卡片上
+				addClickAndLongPress(item, clickAction, longPressAction);
+
+				bookshelfEl.appendChild(item);
+			}
 			// ▲▲▲ 修复结束 ▲▲▲
-
-			bookshelfEl.appendChild(item);
 		}
+		// ▼▼▼ 【修复1.C】将更新筛选按钮状态的逻辑移动到正确的位置 ▼▼▼
+		const filterBtn = document.getElementById('mochao-filter-btn');
+		if (filterBtn) { // 添加一个安全检查
+			filterBtn.style.color = activeMochaoFilters.length > 0 ? 'var(--accent-color)' : 'inherit';
+		}
+		// ▲▲▲ 修复结束 ▲▲▲
 	}
-	// ▲▲▲ 更新结束 ▲▲▲
 
+	/**
+	 * 【全新】打开墨巢专属设置页面
+	 */
+	async function openMochaoSettings() {
+		// 加载当前设置到UI
+		document.getElementById('mochao-font-url-input').value = mochaoSettings.fontUrl || '';
+		
+		// 渲染文风和标签列表
+		await renderStylePresetsList();
+		await renderTagsList();
+
+		showScreen('mochao-settings-screen');
+	}
+
+	/**
+	 * 【全新】渲染文风预设列表
+	 */
+	async function renderStylePresetsList() {
+		const listEl = document.getElementById('mochao-style-presets-list');
+		listEl.innerHTML = '';
+		mochaoSettings.stylePresets = mochaoSettings.stylePresets || [];
+		mochaoSettings.stylePresets.forEach((preset, index) => {
+			const item = document.createElement('div');
+			item.className = 'preset-item';
+			item.innerHTML = `
+				<span>${preset.name}</span>
+				<span class="delete-btn" data-index="${index}">×</span>
+			`;
+			// 点击预设名称可以查看/编辑内容
+			// ▼▼▼ 【优化1】文风预设改为多行输入 ▼▼▼
+			item.querySelector('span').addEventListener('click', async () => {
+				// 【核心修改】将 showCustomPrompt 的最后一个参数改为 'textarea'
+				const newContent = await showCustomPrompt(`编辑文风预设“${preset.name}”`, '请输入该文风的具体描述/Prompt:', preset.content, 'textarea');
+				if (newContent !== null) {
+					preset.content = newContent;
+					alert('已更新，请稍后点击右上角“保存”以生效。');
+				}
+			});
+			// ▲▲▲ 优化结束 ▲▲▲
+			listEl.appendChild(item);
+		});
+	}
+
+	/**
+	 * 【全新】渲染标签池列表
+	 */
+	async function renderTagsList() {
+		const listEl = document.getElementById('mochao-tags-list');
+		listEl.innerHTML = '';
+		mochaoSettings.userTags = mochaoSettings.userTags || [];
+		mochaoSettings.userTags.forEach((tag, index) => {
+			const item = document.createElement('div');
+			item.className = 'tag-item';
+			item.innerHTML = `
+				<span>#${tag}</span>
+				<span class="delete-btn" data-index="${index}">×</span>
+			`;
+			listEl.appendChild(item);
+		});
+	}
+
+	/**
+	 * 【全新】打开标签筛选模态框
+	 */
+	async function openMochaoFilterModal() {
+		const listEl = document.getElementById('mochao-filter-tags-list');
+		listEl.innerHTML = '';
+
+		const allBooks = await db.books.toArray();
+		const allTags = new Set();
+		allBooks.forEach(book => {
+			if (book.tags) book.tags.forEach(tag => allTags.add(tag));
+		});
+
+		if (allTags.size === 0) {
+			listEl.innerHTML = '<p style="color: var(--text-secondary);">还没有任何书本标签可供筛选。</p>';
+		} else {
+			Array.from(allTags).sort().forEach((tag, index) => {
+				const isChecked = activeMochaoFilters.includes(tag);
+				const label = document.createElement('label');
+				const inputId = `mochao-filter-tag-${index}`;
+				label.setAttribute('for', inputId);
+				label.innerHTML = `
+					<input type="checkbox" id="${inputId}" value="${tag}" ${isChecked ? 'checked' : ''}>
+					<span>${tag}</span>
+				`;
+				listEl.appendChild(label);
+			});
+		}
+		document.getElementById('mochao-filter-modal').classList.add('visible');
+	}
+
+
+	// ▲▲▲ 重构结束 ▲▲▲
     /**
      * 渲染指定书本的章节列表
      * @param {number} bookId
@@ -523,34 +817,42 @@ async function renderChapterReader(chapterId) {
      */
     // ▼▼▼ 【修复2.B】重构书本编辑器相关的所有JS函数 ▼▼▼
 
-// ▼▼▼ 【修复2 & 3 & 4】重构书本编辑器相关的所有JS函数 ▼▼▼
+// ▼▼▼ 【修复2 & 5 | 终极版】重构书本编辑器相关的所有JS函数与事件 ▼▼▼
 
 /**
- * 打开书本编辑器（V3版，已补全所有字段）
+ * 打开书本编辑器（V5版，AI按钮已恢复）
  */
 async function openBookEditor(bookId = null) {
     const modal = document.getElementById('mochao-book-editor-modal');
     const aiBtn = document.getElementById('book-ai-magic-btn');
+    const isNewBook = !bookId;
     
+    // 清空旧的人物列表
     document.getElementById('book-characters-list').innerHTML = '';
+    
+    // 动态填充文风选择器
+    const styleSelect = document.getElementById('book-style-prompt-select');
+    styleSelect.innerHTML = '<option value="">-- 选择一个预设 --</option>';
+    (mochaoSettings.stylePresets || []).forEach(preset => {
+        styleSelect.innerHTML += `<option value="${preset.content}">${preset.name}</option>`;
+    });
+    styleSelect.innerHTML += '<option value="custom">自定义...</option>';
 
-    if (bookId) {
+    if (!isNewBook) {
         const book = await db.books.get(bookId);
         if (!book) return;
         modal.dataset.editingId = bookId;
         document.getElementById('book-editor-title').textContent = '编辑书本信息';
-        aiBtn.style.display = 'none';
+        aiBtn.style.display = 'none'; // 编辑模式隐藏一键润色
 
         document.getElementById('book-name-input').value = book.name || '';
         document.getElementById('book-author-input').value = book.authorName || '';
         document.getElementById('book-author-persona-input').value = book.authorPersona || '';
-        document.getElementById('book-tags-input').value = (book.tags || []).join(', ');
-        document.getElementById('book-style-prompt-input').value = book.stylePrompt || '';
         document.getElementById('book-synopsis-input').value = book.synopsis || '';
-        
-        // 大纲字段现在是一个数组，需要用JSON.stringify来显示
+        styleSelect.value = book.stylePrompt || '';
         document.getElementById('book-outline-input').value = book.outline ? JSON.stringify(book.outline, null, 2) : '[]';
         
+        await setupTagsSelector(book.tags || []);
         renderCharacterSheets(book.characterSheets || []);
 
     } else {
@@ -558,16 +860,100 @@ async function openBookEditor(bookId = null) {
         document.getElementById('book-editor-title').textContent = '创建新书';
         aiBtn.style.display = 'block';
         
-        document.getElementById('book-name-input').value = '';
-        document.getElementById('book-author-input').value = '';
-        document.getElementById('book-author-persona-input').value = '';
-        document.getElementById('book-tags-input').value = '';
-        document.getElementById('book-style-prompt-input').value = '';
-        document.getElementById('book-synopsis-input').value = '';
+        ['book-name-input', 'book-author-input', 'book-author-persona-input', 'book-synopsis-input'].forEach(id => document.getElementById(id).value = '');
+        styleSelect.value = '';
         document.getElementById('book-outline-input').value = '[]';
+        
+        await setupTagsSelector([]);
         renderCharacterSheets([]);
     }
+    updateBookTagsSelectionDisplay();
     modal.classList.add('visible');
+}
+
+/**
+ * 【全新】设置标签选择器
+ */
+async function setupTagsSelector(currentTags = []) {
+    const tagsContainer = document.getElementById('book-tags-selector').querySelector('.checkboxes-container');
+    tagsContainer.innerHTML = '';
+    const allTags = new Set(mochaoSettings.userTags || []);
+    currentTags.forEach(tag => allTags.add(tag));
+
+    Array.from(allTags).sort().forEach(tag => {
+        const isChecked = currentTags.includes(tag);
+        tagsContainer.innerHTML += `<label><input type="checkbox" value="${tag}" ${isChecked ? 'checked' : ''}> ${tag}</label>`;
+    });
+    tagsContainer.innerHTML += '<input type="text" id="new-tag-input-in-editor" placeholder="输入并回车添加新标签..." style="width: 90%; margin: 5px 5%; padding: 5px; border: 1px solid #ccc;">';
+}
+
+
+
+/**
+ * 保存书本信息（V4版，最终版）
+ */
+async function saveBookInfo() {
+    const modal = document.getElementById('mochao-book-editor-modal');
+    const bookId = modal.dataset.editingId ? parseInt(modal.dataset.editingId) : null;
+    const name = document.getElementById('book-name-input').value.trim();
+    if (!name) {
+        alert('书名不能为空！');
+        return;
+    }
+
+    let outline;
+    try {
+        const outlineText = document.getElementById('book-outline-input').value.trim();
+        outline = outlineText ? JSON.parse(outlineText) : [];
+    } catch (e) {
+        alert('故事大纲的格式不正确，必须是有效的JSON数组！');
+        return;
+    }
+    
+    // 从DOM中重新收集人物卡信息
+    const characterSheets = Array.from(document.querySelectorAll('#book-characters-list .existing-group-item')).map(item => ({
+        name: item.dataset.name,
+        description: item.dataset.description
+    }));
+    
+    const selectedTags = Array.from(document.querySelectorAll('#book-tags-selector input[type="checkbox"]:checked')).map(cb => cb.value);
+    const stylePrompt = document.getElementById('book-style-prompt-select').value;
+    
+    const bookData = {
+        name: name,
+        authorName: document.getElementById('book-author-input').value.trim(),
+        authorPersona: document.getElementById('book-author-persona-input').value.trim(),
+        tags: selectedTags,
+        stylePrompt: stylePrompt,
+        synopsis: document.getElementById('book-synopsis-input').value.trim(),
+        outline: outline,
+        characterSheets: characterSheets,
+        lastModified: Date.now()
+    };
+
+    if (bookId) {
+        await db.books.update(bookId, bookData);
+    } else {
+        bookData.coverImage = '';
+        await db.books.add(bookData);
+    }
+    
+    modal.classList.remove('visible');
+    await renderBookshelf();
+}
+
+// 标签选择器的显示逻辑（保持不变）
+function updateBookTagsSelectionDisplay() {
+    const container = document.getElementById('book-tags-selector');
+    const checkedBoxes = container.querySelectorAll('input:checked');
+    const displayText = container.querySelector('.selected-options-text');
+    if (checkedBoxes.length === 0) {
+        displayText.textContent = '-- 点击选择或输入新标签 --';
+    } else if (checkedBoxes.length > 2) {
+        displayText.textContent = `已选择 ${checkedBoxes.length} 个标签`;
+    } else {
+        displayText.textContent = Array.from(checkedBoxes).map(cb => cb.value).join(', ');
+    }
 }
 
 /**
@@ -617,59 +1003,6 @@ async function addCharacterManually() {
     listEl.appendChild(item);
 }
 
-/**
- * 保存书本信息（V2版，支持读写所有字段）
- */
-async function saveBookInfo() {
-    const modal = document.getElementById('mochao-book-editor-modal');
-    const bookId = modal.dataset.editingId ? parseInt(modal.dataset.editingId) : null;
-    const name = document.getElementById('book-name-input').value.trim();
-    if (!name) {
-        alert('书名不能为空！');
-        return;
-    }
-
-    let outline;
-    try {
-        const outlineText = document.getElementById('book-outline-input').value.trim();
-        outline = outlineText ? JSON.parse(outlineText) : [];
-    } catch (e) {
-        alert('故事大纲的格式不正确，必须是有效的JSON数组！');
-        return;
-    }
-
-    // 收集所有人物卡信息
-    const characterSheets = [];
-    document.querySelectorAll('#book-characters-list .existing-group-item').forEach(item => {
-        characterSheets.push({
-            name: item.querySelector('.group-name').textContent,
-            description: item.title 
-        });
-    });
-
-    const bookData = {
-        name: name,
-        authorName: document.getElementById('book-author-input').value.trim(),
-        authorPersona: document.getElementById('book-author-persona-input').value.trim(),
-        tags: document.getElementById('book-tags-input').value.trim().split(/[,，\s]+/).filter(Boolean),
-        stylePrompt: document.getElementById('book-style-prompt-input').value.trim(),
-        synopsis: document.getElementById('book-synopsis-input').value.trim(),
-        outline: outline,
-        characterSheets: characterSheets, // 保存人物卡
-        lastModified: Date.now()
-    };
-
-    if (bookId) {
-        await db.books.update(bookId, bookData);
-    } else {
-        bookData.coverImage = ''; // 新书默认无封面
-        await db.books.add(bookData);
-    }
-    
-    modal.classList.remove('visible');
-    await renderBookshelf();
-}
-// ▲▲▲ 重构结束 ▲▲▲
 
 
 // ▼▼▼ 【任务1.C】添加书本操作菜单的核心函数 ▼▼▼
@@ -692,16 +1025,15 @@ async function showBookActions(bookId, bookName) {
         case 'edit':
             openBookEditor(bookId);
             break;
-        case 'export':
-            alert('导出功能将在后续里程碑中实现！');
-            // await exportBookAsTxt(bookId); // 预留函数调用
-            break;
         case 'share':
             alert('分享功能将在后续里程碑中实现！');
             break;
         case 'delete':
             deleteBook(bookId, bookName);
             break;
+		case 'export':
+			await exportBookAsTxt(bookId);
+			break;
     }
 }
 
@@ -746,6 +1078,227 @@ async function deleteBook(bookId, bookName) {
     }
 }
 // ▲▲▲ 新增函数结束 ▲▲▲
+
+
+// ▼▼▼ 【任务5.A】TXT导出核心函数 ▼▼▼
+
+/**
+ * 将指定的书本导出为 .txt 文件
+ * @param {number} bookId
+ */
+async function exportBookAsTxt(bookId) {
+    const book = await db.books.get(bookId);
+    if (!book) {
+        alert('错误：找不到要导出的书本。');
+        return;
+    }
+
+    await showCustomAlert("请稍候...", `正在为您打包《${book.name}》...`);
+
+    const chapters = await db.chapters.where('bookId').equals(bookId).sortBy('order');
+    let fileContent = '';
+
+    // 1. 添加书本元信息
+    fileContent += `【书名】：${book.name}\n`;
+    fileContent += `【作者】：${book.authorName || '未设置'}\n`;
+    fileContent += `【简介】：\n${book.synopsis || '暂无'}\n\n`;
+    fileContent += `------------------------------\n\n`;
+
+    // 2. 逐一添加章节内容
+    for (const chapter of chapters) {
+        fileContent += `【第${chapter.order}章：${chapter.title}】\n\n`;
+        
+        if (chapter.content) {
+            fileContent += `${chapter.content}\n\n`;
+        }
+        if (chapter.authorNote) {
+            fileContent += `【作者的话】：\n${chapter.authorNote}\n\n`;
+        }
+        if (chapter.summary) {
+            fileContent += `【本章摘要】：\n${chapter.summary}\n\n`;
+        }
+        fileContent += `------------------------------\n\n`;
+    }
+
+    // 3. 创建Blob并触发下载
+    try {
+        const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${book.name}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("导出TXT失败:", error);
+        await showCustomAlert("导出失败", `发生了一个错误: ${error.message}`);
+    }
+}
+// ▲▲▲ 新增函数结束 ▲▲▲
+
+// ▼▼▼ 【任务5.D | V5版终极重构】TXT导入核心功能JS ▼▼▼
+
+let currentImportFile = null;
+let rawDecodedText = ''; // 缓存解码后的纯文本，用于反复应用规则
+
+// ▼▼▼ 【终极BUG修复 | 采纳用户方案】修正正则表达式 ▼▼▼
+const DEFAULT_SPLIT_REGEX = '第[一二三四五六七八九十百千万\\d\\s]+章.*|楔子|序章|尾声|番外.*|Chapter\\s*\\d+.*';
+// ▲▲▲ 修复结束 ▲▲▲
+
+function handleTxtImportClick() {
+    document.getElementById('mochao-txt-file-input').click();
+}
+
+async function processSelectedTxtFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    currentImportFile = file;
+
+    document.getElementById('txt-encoding-select').value = 'utf-8';
+    document.getElementById('custom-split-rule-input').value = DEFAULT_SPLIT_REGEX;
+    
+    await decodeAndPreview('utf-8');
+    document.getElementById('mochao-import-txt-modal').classList.add('visible');
+    event.target.value = null;
+}
+
+async function decodeAndPreview(encoding) {
+    if (!currentImportFile) return;
+    const previewArea = document.getElementById('txt-preview-area');
+    previewArea.value = '解码中...';
+
+    try {
+        const arrayBuffer = await currentImportFile.arrayBuffer();
+        const decoder = new TextDecoder(encoding, { FATAL: true });
+        rawDecodedText = decoder.decode(arrayBuffer);
+        previewArea.value = rawDecodedText; // 初始状态，显示纯原文
+        updateChapterSplitPreview(); // 更新章节计数
+    } catch (error) {
+        rawDecodedText = '';
+        previewArea.value = `解码失败！请尝试切换编码格式。\n\n错误: ${error.message}`;
+        document.getElementById('split-preview-count').textContent = '0';
+    }
+}
+
+function updateChapterSplitPreview() {
+    if (!rawDecodedText) return;
+    const pattern = document.getElementById('custom-split-rule-input').value.trim();
+    if (!pattern) {
+        document.getElementById('split-preview-count').textContent = '0';
+        return;
+    }
+    try {
+        const regex = new RegExp(pattern, 'gm');
+        const matches = rawDecodedText.match(regex);
+        document.getElementById('split-preview-count').textContent = matches ? String(matches.length) : '0';
+    } catch (e) {
+        document.getElementById('split-preview-count').textContent = '正则错误!';
+    }
+}
+
+/**
+ * 【已修复】将规则应用到预览文本框中
+ */
+function applySplitRuleToPreview() {
+    if (!rawDecodedText) {
+        alert("请先成功解码文件！");
+        return;
+    }
+    const pattern = document.getElementById('custom-split-rule-input').value.trim();
+    if (!pattern) {
+        alert("分章规则不能为空！");
+        return;
+    }
+
+    try {
+        // 【核心修复】添加了 'm' (多行) 和 'i' (忽略大小写) 标志
+        const regex = new RegExp(`(${pattern})`, 'gmi');
+        
+        // 使用 replace 在每个匹配项前插入分割符
+        const splitText = rawDecodedText.replace(regex, `\n\n---[SPLIT]---\n\n$1`);
+        
+        // 清理可能出现在开头的多余分割符
+        const finalText = splitText.trim().replace(/^---[SPLIT]---\s*/, '');
+        
+        document.getElementById('txt-preview-area').value = finalText;
+        alert("分章标记已应用！您现在可以在文本框中进行手动微调。");
+    } catch (e) {
+        alert(`正则表达式格式错误: ${e.message}`);
+    }
+}
+
+
+// ▼▼▼ 【终极BUG修复 | V2版】修正TXT导入的分割逻辑 ▼▼▼
+/**
+ * 【已彻底修复】最终入库逻辑
+ */
+async function confirmTxtImport() {
+    // 【核心修正1】我们现在只从预览框获取最终文本
+    const textFromPreview = document.getElementById('txt-preview-area').value;
+    
+    // 【核心修正2】我们只使用最简单、最可靠的字符串分割
+    const chaptersContent = textFromPreview.split('---[SPLIT]---').map(s => s.trim()).filter(Boolean);
+
+    if (chaptersContent.length === 0) {
+        alert('没有可导入的章节内容！请先“应用规则”并在预览框中确认分章标记。');
+        return;
+    }
+    
+    // 【核心修正3】智能提取简介的逻辑现在也基于分割后的结果，更可靠
+    let potentialSynopsis = '';
+    const pattern = document.getElementById('custom-split-rule-input').value.trim();
+    if (pattern) {
+        try {
+            // 检查分割后的第一块内容是否像一个章节标题
+            const firstPartHasTitle = new RegExp(pattern, 'i').test(chaptersContent[0].split('\n')[0]);
+            if (!firstPartHasTitle) {
+                // 如果不像，就把它当作简介，并从章节列表中移除
+                potentialSynopsis = chaptersContent.shift(); 
+            }
+        } catch(e) {
+             console.warn("用于检测简介的正则表达式无效，已跳过智能提取。");
+        }
+    }
+
+    const bookName = await showCustomPrompt('为新书命名', '请输入导入书本的名称', currentImportFile.name.replace(/\.txt$/i, ''));
+    if (!bookName || !bookName.trim()) return;
+    
+    const finalSynopsis = await showCustomPrompt('确认书本简介', '我们为您提取了以下内容作为简介，请确认或修改：', potentialSynopsis, 'textarea');
+    if(finalSynopsis === null) return;
+
+    try {
+        const newBookId = await db.books.add({
+            name: bookName.trim(),
+            authorName: '导入',
+            synopsis: finalSynopsis,
+            tags: ['导入'],
+            lastModified: Date.now(),
+            characterSheets: [], outline: []
+        });
+
+        const chaptersToAdd = chaptersContent.map((content, index) => {
+            const lines = content.split('\n');
+            const title = lines.shift().trim() || `第 ${index + 1} 章`;
+            const body = lines.join('\n').trim();
+            return { bookId: newBookId, order: index + 1, title, content: body, authorNote: '', summary: '' };
+        });
+        await db.chapters.bulkAdd(chaptersToAdd);
+
+        document.getElementById('mochao-import-txt-modal').classList.remove('visible');
+        await renderBookshelf();
+        await showCustomAlert('导入成功！', `已成功导入《${bookName}》并创建了 ${chaptersToAdd.length} 个章节。`);
+        
+    } catch (error) {
+        console.error("导入TXT入库失败:", error);
+        await showCustomAlert('导入失败', `发生错误: ${error.message}`);
+    } finally {
+        currentImportFile = null;
+        rawDecodedText = '';
+    }
+}
+// ▲▲▲ 终极修复结束 ▲▲▲
 
     /**
      * 打开章节编辑器（用于新建或编辑）
@@ -870,6 +1423,10 @@ async function openMochaoApp() {
     showScreen('mochao-bookshelf-screen');
 }
 // ▲▲▲ 新增函数结束 ▲▲▲
+
+		// ▼▼▼ 【修复1.B】将总入口函数暴露到全局 ▼▼▼
+		window.openMochaoApp = openMochaoApp;
+		// ▲▲▲ 新增结束 ▲▲▲
     /**
      * “墨巢”App的专属初始化函数事件监听器
      */
@@ -877,16 +1434,101 @@ async function openMochaoApp() {
         // 加载设置
         mochaoSettings = (await db.mochaoSettings.get('main')) || { fontSize: 16, bgColor: '#FDFBF5' };
         
-        // --- 书架页事件 ---
-        document.getElementById('mochao-create-book-btn').addEventListener('click', () => openBookEditor());
-        document.getElementById('mochao-bookshelf-list').addEventListener('click', e => {
-            const card = e.target.closest('.mochao-book-card');
-            if (card) {
-                const bookId = parseInt(card.dataset.bookId);
-                renderChapterList(bookId);
-                showScreen('mochao-chapter-list-screen');
-            }
-        });
+// ▼▼▼ 【修复1.B | 终极版】修正书架页事件监听器 ▼▼▼
+document.getElementById('mochao-create-book-btn').addEventListener('click', () => openBookEditor());
+// 为现在已存在的按钮直接绑定事件
+document.getElementById('mochao-settings-btn').addEventListener('click', openMochaoSettings);
+document.getElementById('mochao-filter-btn').addEventListener('click', openMochaoFilterModal);
+// 导入按钮的事件将在任务5中实现，此处暂时为空
+
+// ▼▼▼ 【任务5.E | V4版终极简化】为TXT导入功能绑定所有事件 ▼▼▼
+
+document.getElementById('mochao-import-txt-btn').addEventListener('click', handleTxtImportClick);
+document.getElementById('mochao-txt-file-input').addEventListener('change', processSelectedTxtFile);
+
+// 编码选择器和正则表达式输入框，任何变动都触发【计数】预览
+document.getElementById('txt-encoding-select').addEventListener('change', e => decodeAndPreview(e.target.value));
+document.getElementById('custom-split-rule-input').addEventListener('input', updateChapterSplitPreview);
+
+// 【【【核心新增！！！】】】为“应用规则”按钮绑定事件
+document.getElementById('apply-split-rule-btn').addEventListener('click', applySplitRuleToPreview);
+
+// 模态框按钮
+document.getElementById('cancel-txt-import-btn').addEventListener('click', () => {
+    document.getElementById('mochao-import-txt-modal').classList.remove('visible');
+    currentImportFile = null;
+    rawDecodedText = '';
+});
+document.getElementById('confirm-txt-import-btn').addEventListener('click', confirmTxtImport);
+
+// ▲▲▲ 事件绑定结束 ▲▲▲
+
+
+// --- “墨巢”设置页事件 ---
+document.getElementById('mochao-settings-back-btn').addEventListener('click', () => showScreen('mochao-bookshelf-screen'));
+document.getElementById('mochao-settings-save-btn').addEventListener('click', async () => {
+    mochaoSettings.fontUrl = document.getElementById('mochao-font-url-input').value.trim();
+    // ...保存其他设置
+    await db.mochaoSettings.put({id: 'main', ...mochaoSettings});
+    // apply... 应用设置的函数
+    alert('墨巢设置已保存！');
+});
+
+// 文风预设管理
+document.getElementById('add-style-preset-btn').addEventListener('click', async () => {
+    const nameInput = document.getElementById('new-style-preset-name-input');
+    const name = nameInput.value.trim();
+    if (!name) return;
+    const content = await showCustomPrompt(`文风预设“${name}”`, '请输入该文风的具体描述/Prompt:', '', 'textarea');
+    if (content) {
+        mochaoSettings.stylePresets.push({ name, content });
+        nameInput.value = '';
+        renderStylePresetsList();
+    }
+});
+document.getElementById('mochao-style-presets-list').addEventListener('click', e => {
+    if (e.target.classList.contains('delete-btn')) {
+        const index = parseInt(e.target.dataset.index);
+        mochaoSettings.stylePresets.splice(index, 1);
+        renderStylePresetsList();
+    }
+});
+
+// 标签池管理
+document.getElementById('add-tag-btn').addEventListener('click', () => {
+    const input = document.getElementById('new-tag-input');
+    const tag = input.value.trim();
+    if (tag && !mochaoSettings.userTags.includes(tag)) {
+        mochaoSettings.userTags.push(tag);
+        input.value = '';
+        renderTagsList();
+    }
+});
+document.getElementById('mochao-tags-list').addEventListener('click', e => {
+    if (e.target.classList.contains('delete-btn')) {
+        const index = parseInt(e.target.dataset.index);
+        mochaoSettings.userTags.splice(index, 1);
+        renderTagsList();
+    }
+});
+
+// --- 筛选弹窗事件 ---
+document.getElementById('mochao-filter-cancel-btn').addEventListener('click', () => {
+    document.getElementById('mochao-filter-modal').classList.remove('visible');
+});
+document.getElementById('mochao-filter-reset-btn').addEventListener('click', () => {
+    activeMochaoFilters = [];
+    renderBookshelf();
+    document.getElementById('mochao-filter-modal').classList.remove('visible');
+});
+document.getElementById('mochao-filter-apply-btn').addEventListener('click', () => {
+    const selected = document.querySelectorAll('#mochao-filter-tags-list input:checked');
+    activeMochaoFilters = Array.from(selected).map(cb => cb.value);
+    renderBookshelf();
+    document.getElementById('mochao-filter-modal').classList.remove('visible');
+});
+// ▲▲▲ 重构结束 ▲▲▲
+
         
         // --- 书本编辑器弹窗事件 ---
         document.getElementById('mochao-book-editor-modal-close').addEventListener('click', () => {
@@ -912,6 +1554,66 @@ async function openMochaoApp() {
 		document.getElementById('ai-generate-characters-btn').addEventListener('click', () => alert('AI生成人物功能将在里程碑2中实现！'));
 		document.getElementById('ai-generate-outline-btn').addEventListener('click', () => alert('AI生成大纲功能将在里程碑2中实现！'));
 		// ▲▲▲ 事件绑定结束 ▲▲▲
+
+
+
+    // 只有在DOM加载后才能安全地绑定这些事件
+    const bookEditorModal = document.getElementById('mochao-book-editor-modal');
+
+    if(bookEditorModal) {
+        // AI按钮占位符
+        document.getElementById('book-ai-magic-btn').addEventListener('click', () => alert('AI魔法棒功能将在里程碑2中实现！'));
+        document.getElementById('ai-generate-characters-btn').addEventListener('click', () => alert('AI生成人物功能将在里程碑2中实现！'));
+        document.getElementById('ai-generate-outline-btn').addEventListener('click', () => alert('AI生成大纲功能将在里程碑2中实现！'));
+        
+        // 人物卡的手动添加和删除
+        document.getElementById('add-character-btn').addEventListener('click', addCharacterManually);
+        document.getElementById('book-characters-list').addEventListener('click', e => {
+            if (e.target.classList.contains('delete-group-btn')) {
+                e.target.closest('.existing-group-item').remove();
+                if (document.getElementById('book-characters-list').children.length === 0) {
+                    renderCharacterSheets([]);
+                }
+            }
+        });
+
+        // 标签选择器
+        const bookTagsSelector = document.getElementById('book-tags-selector');
+        bookTagsSelector.querySelector('.select-box').addEventListener('click', (e) => {
+            e.stopPropagation();
+            bookTagsSelector.querySelector('.checkboxes-container').classList.toggle('visible');
+            bookTagsSelector.querySelector('.select-box').classList.toggle('expanded');
+        });
+        bookTagsSelector.querySelector('.checkboxes-container').addEventListener('change', updateBookTagsSelectionDisplay);
+        bookTagsSelector.querySelector('.checkboxes-container').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.id === 'new-tag-input-in-editor') {
+                e.preventDefault();
+                const input = e.target;
+                const newTag = input.value.trim();
+                if (newTag && !Array.from(bookTagsSelector.querySelectorAll('input[type="checkbox"]')).some(cb => cb.value === newTag)) {
+                    const newLabel = document.createElement('label');
+                    newLabel.innerHTML = `<input type="checkbox" value="${newTag}" checked> ${newTag}`;
+                    input.before(newLabel);
+                    updateBookTagsSelectionDisplay();
+                }
+                input.value = '';
+            }
+        });
+
+        // 文风选择器
+        document.getElementById('book-style-prompt-select').addEventListener('change', async function(e) {
+            if (e.target.value === 'custom') {
+                const customStyle = await showCustomPrompt('自定义文风', '请输入详细的文风描述/Prompt:', '', 'textarea');
+                if (customStyle) {
+                    const newOption = new Option('自定义: ' + customStyle.substring(0,10)+'...', customStyle, true, true);
+                    e.target.add(newOption);
+                } else {
+                    e.target.value = '';
+                }
+            }
+        });
+    }
+
 
 
         // --- 章节列表页事件 ---
@@ -1104,9 +1806,7 @@ async function openMochaoApp() {
             alert('阅读外观已保存！');
         });
 
-		// ▼▼▼ 【修复1.B】将总入口函数暴露到全局 ▼▼▼
-		window.openMochaoApp = openMochaoApp;
-		// ▲▲▲ 新增结束 ▲▲▲
+
     }
 
     // 将初始化函数暴露到全局，以便主HTML文件可以调用

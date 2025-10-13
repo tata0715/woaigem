@@ -38,6 +38,8 @@
 <!-- ▼▼▼ 【核心新增】为“墨巢”App的拖拽排序功能引入SortableJS库 ▼▼▼ -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <!-- ▲▲▲ 新增结束 ▲▲▲ -->
+<!-- ▼▼▼ 【核心新增】为“墨巢”App的TXT导入解码功能引入text-encoding库 ▼▼▼ -->
+<script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.js"></script>
 
 
     <style>
@@ -9437,6 +9439,122 @@
 }
 /* ▲▲▲ 视觉修复结束 ▲▲▲ */
 
+/* ▼▼▼ 【优化2 & 3】为“墨巢”App添加夜间模式和字体支持 ▼▼▼ */
+
+/* 核心：当主屏幕有 .dark-mode 时，墨巢的屏幕也应用暗色主题 */
+#phone-screen.dark-mode .mochao-app-screen {
+    --secondary-bg: #1c1c1e; /* 卡片、输入框背景 */
+    --border-color: #38383a;  /* 边框颜色 */
+    --text-primary: #ffffff;   /* 主要文字颜色 */
+    --text-secondary: #8d8d92; /* 次要文字颜色 */
+    background-color: #000000; /* 屏幕主背景 */
+}
+
+/* 字体应用：让墨巢的所有屏幕都继承body的字体设置 */
+.mochao-app-screen {
+    font-family: inherit;
+}
+
+/* 夜间模式下的各种UI元素颜色适配 */
+#phone-screen.dark-mode .mochao-book-card,
+#phone-screen.dark-mode .preset-item,
+#phone-screen.dark-mode .tag-item,
+#phone-screen.dark-mode #mochao-filter-tags-list label {
+    background-color: var(--secondary-bg);
+    border-color: var(--border-color);
+}
+#phone-screen.dark-mode #mochao-chapter-reader-screen {
+    background-color: var(--secondary-bg); /* 阅读页背景也同步 */
+}
+#phone-screen.dark-mode .mochao-book-card-title {
+    color: var(--text-primary);
+}
+/* ▲▲▲ 新增CSS结束 ▲▲▲ */
+
+/* ▼▼▼ 【任务3.5 & 4.B】为“墨巢”设置页和筛选功能添加CSS ▼▼▼ */
+
+/* --- 设置页 --- */
+.settings-header {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 16px;
+    color: var(--text-primary);
+}
+.settings-header:first-of-type {
+    margin-top: 0;
+}
+#mochao-style-presets-list, #mochao-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.preset-item, .tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f0f2f5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.preset-item .delete-btn, .tag-item .delete-btn {
+    cursor: pointer;
+    color: #ff3b30;
+    font-weight: bold;
+}
+
+/* --- 筛选弹窗 --- */
+#mochao-filter-tags-list label {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f0f2f5;
+    padding: 6px 12px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+#mochao-filter-tags-list input[type="checkbox"] {
+    display: none;
+}
+#mochao-filter-tags-list input[type="checkbox"]:checked + span {
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: 500;
+}
+#mochao-filter-tags-list label span {
+    padding: 6px 12px;
+    margin: -6px -12px;
+    border-radius: 15px;
+    transition: all 0.2s ease;
+}
+/* ▲▲▲ 新增CSS结束 ▲▲▲ */
+/* ▼▼▼ 【优化4.B】书架卡片新增样式 ▼▼▼ */
+.book-card-author {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0 0 8px 0;
+}
+.book-card-tags {
+    margin-bottom: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.book-card-tags span {
+    font-size: 11px;
+    background-color: #e7f3ff;
+    color: var(--accent-color);
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+#phone-screen.dark-mode .book-card-tags span {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+/* ▲▲▲ 新增CSS结束 ▲▲▲ */
     </style>
 </head>
 <body>

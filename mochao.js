@@ -188,6 +188,371 @@ function showChoiceModal(title, options) {
     });
 }
 // ▲▲▲ 修复结束 ▲▲▲
+
+
+// ▼▼▼ 【优化1.A】创建CSS注入函数 ▼▼▼
+/**
+ * 动态将“墨巢”App的所有专属CSS样式注入到主DOM的<head>中。
+ */
+function injectMochaoCSS() {
+    // 1. 定义所有CSS规则
+    const mochaoAppCSS = `
+        /* ▼▼▼ 【全新】这是“墨巢”App的【全部CSS样式】 ▼▼▼ */
+
+			/* --- 书架页面 --- */
+			#mochao-bookshelf-screen .list-container {
+				padding: 15px;
+				display: grid;
+				grid-template-columns: 1fr; /* 每行一个，手机端更清晰 */
+				gap: 15px;
+			}
+			.mochao-book-card {
+				background-color: var(--secondary-bg);
+				border-radius: 12px;
+				box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+				display: flex;
+				padding: 15px;
+				gap: 15px;
+				cursor: pointer;
+				transition: transform 0.2s, box-shadow 0.2s;
+			}
+			.mochao-book-card:hover {
+				transform: translateY(-5px);
+				box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+			}
+			.book-card-cover {
+				width: 80px;
+				height: 110px;
+				border-radius: 8px;
+				background-size: cover;
+				background-position: center;
+				flex-shrink: 0;
+				background-color: #e9ecef;
+			}
+			.book-card-info {
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+			.book-card-title {
+				font-size: 16px;
+				font-weight: 600;
+				margin: 0 0 8px 0;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.book-card-synopsis {
+				font-size: 13px;
+				color: var(--text-secondary);
+				margin: 0 0 8px 0;
+				line-height: 1.5;
+				flex-grow: 1;
+			}
+			.book-card-meta {
+				font-size: 12px;
+				color: #b0b0b0;
+				margin: 0;
+			}
+
+			/* --- 章节编辑/阅读页 --- */
+			#mochao-chapter-editor-screen .form-container {
+				display: flex;
+				flex-direction: column;
+				padding: 15px;
+				gap: 15px;
+			}
+			#mochao-chapter-editor-screen .form-group {
+				margin: 0;
+				display: flex;
+				flex-direction: column;
+			}
+			#mochao-chapter-editor-screen textarea {
+				min-height: 120px;
+				font-size: 16px;
+				line-height: 1.6;
+			}
+			#editor-content-input {
+				flex-grow: 1; /* 让正文区域占据最多空间 */
+			}
+			#mochao-chapter-editor-screen .editor-bottom-bar {
+				flex-shrink: 0;
+				padding: 10px 15px;
+				padding-bottom: calc(10px + env(safe-area-inset-bottom));
+				border-top: 1px solid var(--border-color);
+				background-color: rgba(247, 247, 247, 0.9);
+				backdrop-filter: blur(10px);
+				display: flex;
+				gap: 10px;
+			}
+
+			#mochao-chapter-reader-screen .list-container {
+				padding: 20px;
+				font-size: 16px;
+				line-height: 1.8;
+			}
+			#reader-chapter-title {
+				font-size: 22px;
+				font-weight: bold;
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid var(--border-color);
+			}
+			#reader-author-note, #reader-summary {
+				background-color: rgba(0,0,0,0.05);
+				padding: 15px;
+				border-radius: 8px;
+				margin-top: 25px;
+				font-size: 0.9em;
+				color: var(--text-secondary);
+			}
+			#reader-author-note::before, #reader-summary::before {
+				display: block;
+				font-weight: 600;
+				margin-bottom: 8px;
+				color: var(--text-primary);
+			}
+			#reader-author-note::before { content: '作者的话'; }
+			#reader-summary::before { content: '本章摘要'; }
+
+			/* --- 阅读外观设置弹窗 --- */
+			.appearance-bg-selector {
+				display: flex;
+				gap: 10px;
+				margin-top: 10px;
+			}
+			.bg-color-option {
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				cursor: pointer;
+				border: 2px solid var(--border-color);
+			}
+			/* ▲▲▲ “墨巢”App CSS样式结束 ▲▲▲ */
+
+			/* ▼▼▼ 【任务3.B | V4版终极视觉修复】章节管理模式CSS ▼▼▼ */
+
+			/* 1. 【核心】为我们全新的 .mochao-chapter-item 设置正确的Flex布局 */
+			.mochao-chapter-item {
+				display: flex;
+				align-items: center; /* 垂直居中对齐：手柄、内容、删除按钮 */
+				gap: 15px; /* 在元素之间创建间距 */
+				padding: 12px 20px;
+				border-bottom: 1px solid var(--border-color);
+				cursor: pointer; /* 普通模式下可点击 */
+			}
+			.mochao-chapter-item:last-child {
+				border-bottom: none;
+			}
+
+			/* 2. 中间的内容区：自动撑满，内部垂直堆叠标题和摘要 */
+			.mochao-chapter-item .list-item-content {
+				flex-grow: 1; /* 占据所有可用空间，将删除按钮推到最右侧 */
+				display: flex;
+				flex-direction: column; /* 让标题和摘要上下排列 */
+				justify-content: center;
+				min-width: 0;
+			}
+
+			.mochao-chapter-item .item-content {
+				font-size: 13px; /* 摘要字号稍小 */
+				color: var(--text-secondary); /* 【核心】使用次要文字颜色，让它变浅！ */
+			}
+
+			/* 3. 拖拽手柄：默认隐藏 */
+			.mochao-chapter-item .chapter-drag-handle {
+				display: none;
+				cursor: grab;
+				color: var(--text-secondary);
+				font-size: 20px;
+			}
+
+			/* 4. 删除按钮：默认隐藏 */
+			.mochao-chapter-item .chapter-delete-btn {
+				display: none;
+				background-color: #ff3b30;
+				color: white;
+				width: 24px;
+				height: 24px;
+				border-radius: 50%;
+				border: none;
+				font-weight: bold;
+				font-size: 16px;
+				line-height: 24px;
+				text-align: center;
+				cursor: pointer;
+				flex-shrink: 0;
+			}
+
+			/* 5. 【核心逻辑】当进入管理模式时... */
+			#mochao-chapter-list.managing .mochao-chapter-item {
+				cursor: default; /* ...移除点击手势 */
+			}
+			#mochao-chapter-list.managing .mochao-chapter-item .chapter-drag-handle {
+				display: block; /* ...显示拖拽手柄 */
+			}
+			#mochao-chapter-list.managing .mochao-chapter-item .chapter-delete-btn {
+				display: block; /* ...显示删除按钮 */
+			}
+			#mochao-chapter-list.managing .mochao-chapter-item .list-item-content {
+				pointer-events: none; /* ...禁止点击内容区 */
+			}
+
+			/* 6. 拖拽过程中的占位符样式 (保持不变) */
+			.sortable-ghost {
+				opacity: 0.4;
+				background-color: #e7f3ff;
+			}
+			/* ▲▲▲ 视觉修复结束 ▲▲▲ */
+
+			/* ▼▼▼ 【优化2 & 3】为“墨巢”App添加夜间模式和字体支持 ▼▼▼ */
+
+			/* 核心：当主屏幕有 .dark-mode 时，墨巢的屏幕也应用暗色主题 */
+			#phone-screen.dark-mode .mochao-app-screen {
+				--secondary-bg: #1c1c1e; /* 卡片、输入框背景 */
+				--border-color: #38383a;  /* 边框颜色 */
+				--text-primary: #ffffff;   /* 主要文字颜色 */
+				--text-secondary: #8d8d92; /* 次要文字颜色 */
+				background-color: #000000; /* 屏幕主背景 */
+			}
+
+			/* 字体应用：让墨巢的所有屏幕都继承body的字体设置 */
+			.mochao-app-screen {
+				font-family: inherit;
+			}
+
+			/* 夜间模式下的各种UI元素颜色适配 */
+			#phone-screen.dark-mode .mochao-book-card,
+			#phone-screen.dark-mode .preset-item,
+			#phone-screen.dark-mode .tag-item,
+			#phone-screen.dark-mode #mochao-filter-tags-list label {
+				background-color: var(--secondary-bg);
+				border-color: var(--border-color);
+			}
+			#phone-screen.dark-mode #mochao-chapter-reader-screen {
+				background-color: var(--secondary-bg); /* 阅读页背景也同步 */
+			}
+			#phone-screen.dark-mode .mochao-book-card-title {
+				color: var(--text-primary);
+			}
+			/* ▲▲▲ 新增CSS结束 ▲▲▲ */
+
+			/* ▼▼▼ 【任务3.5 & 4.B】为“墨巢”设置页和筛选功能添加CSS ▼▼▼ */
+
+			/* --- 设置页 --- */
+			.settings-header {
+				margin-top: 25px;
+				margin-bottom: 15px;
+				padding-bottom: 8px;
+				border-bottom: 1px solid var(--border-color);
+				font-size: 16px;
+				color: var(--text-primary);
+			}
+			.settings-header:first-of-type {
+				margin-top: 0;
+			}
+			#mochao-style-presets-list, #mochao-tags-list {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			.preset-item, .tag-item {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				background-color: #f0f2f5;
+				padding: 8px 12px;
+				border-radius: 6px;
+				font-size: 14px;
+			}
+			.preset-item .delete-btn, .tag-item .delete-btn {
+				cursor: pointer;
+				color: #ff3b30;
+				font-weight: bold;
+			}
+
+			/* --- 筛选弹窗 --- */
+			#mochao-filter-tags-list label {
+				display: inline-flex;
+				align-items: center;
+				background-color: #f0f2f5;
+				padding: 6px 12px;
+				border-radius: 15px;
+				cursor: pointer;
+				font-size: 14px;
+				transition: all 0.2s ease;
+			}
+			#mochao-filter-tags-list input[type="checkbox"] {
+				display: none;
+			}
+			#mochao-filter-tags-list input[type="checkbox"]:checked + span {
+				background-color: var(--accent-color);
+				color: white;
+				font-weight: 500;
+			}
+			#mochao-filter-tags-list label span {
+				padding: 6px 12px;
+				margin: -6px -12px;
+				border-radius: 15px;
+				transition: all 0.2s ease;
+			}
+			/* ▲▲▲ 新增CSS结束 ▲▲▲ */
+			/* ▼▼▼ 【优化4.B】书架卡片新增样式 ▼▼▼ */
+			.book-card-author {
+				font-size: 13px;
+				font-weight: 500;
+				color: var(--text-secondary);
+				margin: 0 0 8px 0;
+			}
+			.book-card-tags {
+				margin-bottom: 8px;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+			}
+			.book-card-tags span {
+				font-size: 11px;
+				background-color: #e7f3ff;
+				color: var(--accent-color);
+				padding: 2px 6px;
+				border-radius: 8px;
+			}
+			#phone-screen.dark-mode .book-card-tags span {
+				background-color: rgba(0, 123, 255, 0.2);
+			}
+
+			/* ▼▼▼ 【修复3.A】完善“墨巢”设置页的夜间模式 ▼▼▼ */
+			#phone-screen.dark-mode #mochao-settings-screen .form-container {
+				background-color: #000000;
+			}
+			#phone-screen.dark-mode .settings-header {
+				color: var(--text-primary);
+				border-bottom-color: var(--border-color);
+			}
+			#phone-screen.dark-mode .preset-item,
+			#phone-screen.dark-mode .tag-item {
+				background-color: #2c2c2e;
+			}
+			/* ▲▲▲ 修复结束 ▲▲▲ */
+			/* ▲▲▲ 新增CSS结束 ▲▲▲ */
+    `;
+
+    // 2. 创建一个新的<style>标签
+    const styleElement = document.createElement('style');
+    styleElement.id = 'mochao-app-styles'; // 给它一个ID，方便管理
+    styleElement.textContent = mochaoAppCSS;
+
+    // 3. 将<style>标签注入到<head>中
+    document.head.appendChild(styleElement);
+}
+// ▲▲▲ 新增函数结束 ▲▲▲
+
+
+// ▼▼▼ 【优化1.B】立即执行CSS注入 ▼▼▼
+injectMochaoCSS();
+// ▲▲▲ 新增结束 ▲▲▲
+
+
 /**
  * 动态将“墨巢”App的所有HTML结构和专属模态框注入到主DOM中。
  * 这个函数会在JS文件加载后立即执行。
@@ -977,31 +1342,60 @@ function renderCharacterSheets(characters) {
     }
 }
 
-/**
- * 【全新】手动添加一个新的人物卡
- */
+// ▼▼▼ 【优化4】为添加人物功能增加“从已有角色选择”的选项 ▼▼▼
 async function addCharacterManually() {
-    const name = await showCustomPrompt("添加人物", "请输入人物姓名：");
-    if (!name || !name.trim()) return;
+    // 1. 获取所有可选的单聊角色
+    const existingChars = Object.values(state.chats).filter(c => !c.isGroup);
+    
+    // 2. 构建选项数组
+    const options = [
+        { text: '✍️ 手动创建新人物', value: 'manual' },
+        ...existingChars.map(char => ({
+            text: `👤 选择已有角色: ${char.name}`,
+            value: char.id // 使用角色的唯一ID作为返回值
+        }))
+    ];
 
-    const description = await showCustomPrompt(`人物“${name}”的设定`, "请输入该人物的简介/设定：", "", "textarea");
-    if (description === null) return;
+    // 3. 弹出选择菜单
+    const choice = await showChoiceModal('添加主要人物', options);
 
-    // 这是一个临时方案，直接在DOM上操作，点击保存时再统一处理
-    const listEl = document.getElementById('book-characters-list');
-    if(listEl.querySelector('p')) listEl.innerHTML = ''; // 如果有提示语，先清空
+    let name, description;
 
-    const item = document.createElement('div');
-    item.className = 'existing-group-item';
-    item.dataset.isNew = 'true'; // 标记为新添加的
-    item.dataset.name = name.trim();
-    item.dataset.description = description;
-    item.innerHTML = `
-        <span class="group-name" title="${description}">${name.trim()}</span>
-        <span class="delete-group-btn">×</span>
-    `;
-    listEl.appendChild(item);
+    if (choice === 'manual') {
+        // 如果选择手动创建，执行原有逻辑
+        name = await showCustomPrompt("添加人物", "请输入人物姓名：");
+        if (!name || !name.trim()) return;
+        description = await showCustomPrompt(`人物“${name}”的设定`, "请输入该人物的简介/设定：", "", "textarea");
+        if (description === null) return;
+
+    } else if (choice) {
+        // 如果选择了一个已有的角色ID
+        const selectedChar = state.chats[choice];
+        if (selectedChar) {
+            name = selectedChar.name;
+            description = selectedChar.settings.aiPersona;
+        }
+    } else {
+        // 用户点击了取消
+        return;
+    }
+    
+    // 后续的DOM操作逻辑保持不变
+    if (name) {
+        const listEl = document.getElementById('book-characters-list');
+        if(listEl.querySelector('p')) listEl.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'existing-group-item';
+        item.dataset.name = name.trim();
+        item.dataset.description = description || '';
+        item.innerHTML = `
+            <span class="group-name" title="${description || ''}">${name.trim()}</span>
+            <span class="delete-group-btn">×</span>
+        `;
+        listEl.appendChild(item);
+    }
 }
+// ▲▲▲ 优化结束 ▲▲▲
 
 
 
@@ -1424,9 +1818,43 @@ async function openMochaoApp() {
 }
 // ▲▲▲ 新增函数结束 ▲▲▲
 
-		// ▼▼▼ 【修复1.B】将总入口函数暴露到全局 ▼▼▼
-		window.openMochaoApp = openMochaoApp;
-		// ▲▲▲ 新增结束 ▲▲▲
+window.openMochaoApp = openMochaoApp;
+
+
+	// ▼▼▼ 【修复3.B】添加字体应用的核心函数 ▼▼▼
+	let mochaoFontStyleTag = null; // 全局变量，用于引用我们创建的style标签
+
+	/**
+	 * 应用“墨巢”专属的全局阅读字体
+	 * @param {string} fontUrl - 字体文件的URL
+	 */
+	function applyMochaoFont(fontUrl) {
+		if (!mochaoFontStyleTag) {
+			mochaoFontStyleTag = document.createElement('style');
+			mochaoFontStyleTag.id = 'mochao-dynamic-font-style';
+			document.head.appendChild(mochaoFontStyleTag);
+		}
+
+		if (!fontUrl) {
+			mochaoFontStyleTag.innerHTML = ''; // 如果URL为空，则清空样式
+			return;
+		}
+
+		const fontName = 'mochao-custom-font';
+		mochaoFontStyleTag.innerHTML = `
+			@font-face {
+			  font-family: '${fontName}';
+			  src: url('${fontUrl}');
+			  font-display: swap;
+			}
+			#mochao-chapter-reader-screen .list-container {
+			  font-family: '${fontName}', sans-serif !important;
+			}
+		`;
+	}
+	// ▲▲▲ 新增函数结束 ▲▲▲
+
+
     /**
      * “墨巢”App的专属初始化函数事件监听器
      */
@@ -1466,13 +1894,21 @@ document.getElementById('confirm-txt-import-btn').addEventListener('click', conf
 
 // --- “墨巢”设置页事件 ---
 document.getElementById('mochao-settings-back-btn').addEventListener('click', () => showScreen('mochao-bookshelf-screen'));
+// ▼▼▼ 【修复3.C】更新设置保存逻辑 ▼▼▼
 document.getElementById('mochao-settings-save-btn').addEventListener('click', async () => {
+    // 保存字体URL
     mochaoSettings.fontUrl = document.getElementById('mochao-font-url-input').value.trim();
-    // ...保存其他设置
+    
+    // 保存其他设置... (这部分逻辑不变)
+    
     await db.mochaoSettings.put({id: 'main', ...mochaoSettings});
-    // apply... 应用设置的函数
+    
+    // 【核心新增】在保存后，立即应用新字体
+    applyMochaoFont(mochaoSettings.fontUrl);
+    
     alert('墨巢设置已保存！');
 });
+// ▲▲▲ 修复结束 ▲▲▲
 
 // 文风预设管理
 document.getElementById('add-style-preset-btn').addEventListener('click', async () => {
@@ -1670,11 +2106,11 @@ document.getElementById('mochao-filter-apply-btn').addEventListener('click', () 
 			renderChapterList(activeBookId);
 		});
 
-		// 使用事件委托处理章节的点击和删除
+		// ▼▼▼ 【修复2】重构章节列表的事件委托（已加入删除后重排逻辑） ▼▼▼
 		document.getElementById('mochao-chapter-list').addEventListener('click', async (e) => {
 			const listEl = document.getElementById('mochao-chapter-list');
 			
-			// 如果是删除按钮
+			// 如果点击的是删除按钮
 			if (e.target.classList.contains('chapter-delete-btn')) {
 				const chapterId = parseInt(e.target.dataset.chapterId);
 				const chapter = await db.chapters.get(chapterId);
@@ -1682,10 +2118,27 @@ document.getElementById('mochao-filter-apply-btn').addEventListener('click', () 
 				
 				if (confirmed) {
 					await db.transaction('rw', db.chapters, db.chapterComments, async () => {
+						// 1. 删除评论和章节本身
 						await db.chapterComments.where('chapterId').equals(chapterId).delete();
 						await db.chapters.delete(chapterId);
+
+						// 2. 【核心修复】获取剩余的所有章节，并按现有顺序排序
+						const remainingChapters = await db.chapters.where('bookId').equals(activeBookId).sortBy('order');
+						
+						// 3. 创建一个更新任务数组
+						const updates = remainingChapters.map((chap, index) => {
+							return {
+								key: chap.id,
+								changes: { order: index + 1 } // 重新分配从1开始的连续序号
+							};
+						});
+
+						// 4. 批量更新数据库
+						if (updates.length > 0) {
+							await db.chapters.bulkUpdate(updates);
+						}
 					});
-					// 重新渲染列表
+					// 5. 重新渲染列表，此时序号就是正确的了
 					await renderChapterList(activeBookId);
 				}
 			} 
@@ -1699,7 +2152,7 @@ document.getElementById('mochao-filter-apply-btn').addEventListener('click', () 
 				}
 			}
 		});
-		// ▲▲▲ 重构结束 ▲▲▲
+		// ▲▲▲ 修复结束 ▲▲▲
 
 
 

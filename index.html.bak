@@ -19104,8 +19104,38 @@ if (qzoneActionTaken) {
         }
         // ▲▲▲ 替换结束 ▲▲▲
         
-                function addLongPressListener(element, callback) { let pressTimer; const startPress = (e) => { if(isSelectionMode) return; e.preventDefault(); pressTimer = window.setTimeout(() => callback(e), 500); }; const cancelPress = () => clearTimeout(pressTimer); element.addEventListener('mousedown', startPress); element.addEventListener('mouseup', cancelPress); element.addEventListener('mouseleave', cancelPress); element.addEventListener('touchstart', startPress, { passive: true }); element.addEventListener('touchend', cancelPress); element.addEventListener('touchmove', cancelPress); }
-        
+// --- 请用这整块【最终修复版】的代码，完整替换旧的 addLongPressListener 函数 ---
+function addLongPressListener(element, callback) {
+    let pressTimer;
+
+    const startPress = (e) => {
+        if (isSelectionMode) return;
+        // 【核心修复1】从这里移除了 e.preventDefault()，这是让单击功能恢复正常的关键！
+        pressTimer = window.setTimeout(() => {
+            // 当长按500毫秒成功触发时，才执行回调
+            callback(e);
+        }, 500);
+    };
+
+    const cancelPress = () => {
+        clearTimeout(pressTimer);
+    };
+
+    // 绑定鼠标事件
+    element.addEventListener('mousedown', startPress);
+    element.addEventListener('mouseup', cancelPress);
+    element.addEventListener('mouseleave', cancelPress);
+
+    // 绑定触摸事件 (依然保留 passive: false 以消除警告)
+    element.addEventListener('touchstart', startPress, { passive: false });
+    element.addEventListener('touchend', cancelPress);
+    element.addEventListener('touchmove', cancelPress);
+
+    // 【核心修复2】新增一个专门的事件监听器，用来阻止长按时弹出系统菜单。
+    // 这是一个更精确、不会影响单击的解决方案。
+    element.addEventListener('contextmenu', e => e.preventDefault());
+}
+
                 async function handleListenTogetherClick() { const targetChatId = state.activeChatId; if (!targetChatId) return; if (!musicState.isActive) { startListenTogetherSession(targetChatId); return; } if (musicState.activeChatId === targetChatId) { document.getElementById('music-player-overlay').classList.add('visible'); } else { const oldChatName = state.chats[musicState.activeChatId]?.name || '未知'; const newChatName = state.chats[targetChatId]?.name || '当前'; const confirmed = await showCustomConfirm('切换听歌对象', `您正和「${oldChatName}」听歌。要结束并开始和「${newChatName}」的新会话吗？`, { confirmButtonClass: 'btn-danger' }); if (confirmed) { await endListenTogetherSession(true); await new Promise(resolve => setTimeout(resolve, 50)); startListenTogetherSession(targetChatId); } } }
 
 async function startListenTogetherSession(chatId) { const chat = state.chats[chatId]; if (!chat) return; musicState.totalElapsedTime = chat.musicData.totalTime || 0; musicState.isActive = true; musicState.activeChatId = chatId; if (musicState.playlist.length > 0) { musicState.currentIndex = 0; } else { musicState.currentIndex = -1; } if(musicState.timerId) clearInterval(musicState.timerId); musicState.timerId = setInterval(() => { if (musicState.isPlaying) { musicState.totalElapsedTime++; updateElapsedTimeDisplay(); } }, 1000); updatePlayerUI(); updatePlaylistUI(); document.getElementById('music-player-overlay').classList.add('visible'); }

@@ -15282,7 +15282,12 @@ async function loadAllDataFromDB() {
                     model: preset.model,
                     secondaryProxyUrl: preset.secondaryProxyUrl,
                     secondaryApiKey: preset.secondaryApiKey,
-                    secondaryModel: preset.secondaryModel
+                    secondaryModel: preset.secondaryModel,
+					// ▼▼▼ 【核心新增】在这里添加下面这三行 ▼▼▼
+					minimaxGroupId: preset.minimaxGroupId || '',
+					minimaxApiKey: preset.minimaxApiKey || '',
+					minimaxModel: preset.minimaxModel || 'speech-01'
+					// ▲▲▲ 新增结束 ▲▲▲
                 };
                 // 将加载的配置保存为当前正在使用的配置
                 await db.apiConfig.put(state.apiConfig);
@@ -15312,7 +15317,12 @@ async function loadAllDataFromDB() {
                 model: document.getElementById('model-select').value,
                 secondaryProxyUrl: document.getElementById('secondary-proxy-url').value.trim(),
                 secondaryApiKey: document.getElementById('secondary-api-key').value.trim(),
-                secondaryModel: document.getElementById('secondary-model-select').value
+                secondaryModel: document.getElementById('secondary-model-select').value,
+				// ▼▼▼ 【核心新增】在这里添加下面这三行 ▼▼▼
+				minimaxGroupId: document.getElementById('minimax-group-id').value.trim(),
+				minimaxApiKey: document.getElementById('minimax-api-key').value.trim(),
+				minimaxModel: document.getElementById('minimax-model-select').value
+				// ▲▲▲ 新增结束 ▲▲▲
             };
         
             // 检查是否已存在同名预设

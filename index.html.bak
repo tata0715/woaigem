@@ -9430,6 +9430,41 @@
 }
 /* ▲▲▲ 游戏功能CSS样式结束 ▲▲▲ */
 
+/* ▼▼▼ 【全新 | 保持横向布局】这是修复长按菜单截断问题的最终版样式 ▼▼▼ */
+
+/* 1. 核心修改：让按钮容器支持换行 */
+#message-actions-modal .custom-modal-footer {
+    flex-wrap: wrap; /* 允许项目换行 */
+    padding: 10px;   /* 在容器周围增加一些内边距，让布局更舒展 */
+    gap: 10px;       /* 在按钮之间增加间距 */
+    justify-content: flex-start; /* 让按钮从左侧开始排列 */
+}
+
+/* 2. 为每一个操作按钮（除了取消按钮）设置尺寸和样式 */
+#message-actions-modal .custom-modal-footer button:not(#cancel-message-action-btn) {
+    /* 核心修改：不再平分宽度，而是允许它们根据内容生长，并设置一个基础宽度 */
+    flex-grow: 1;
+    flex-basis: 75px; /* 每个按钮的基础宽度，确保至少能容纳4个字 */
+    
+    /* (可选但推荐) 统一按钮外观，使其更像一个网格 */
+    border: none;
+    background-color: #f0f2f5;
+    border-radius: 8px;
+    padding: 12px 5px; /* 调整内边距，让文字居中 */
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 3. 让“取消”按钮单独占据一整行，并恢复其独立样式 */
+#message-actions-modal #cancel-message-action-btn {
+    width: 100%; /* 强制宽度为100% */
+    flex-basis: 100%; /* 在flex布局中也确保它占满一行 */
+    margin-top: 8px;
+    border-radius: 8px;
+    background-color: #f0f2f5;
+    font-weight: 600;
+}
+/* ▲▲▲ 新增CSS粘贴结束 ▲▲▲ */
     </style>
 </head>
 <body>
@@ -11556,6 +11591,7 @@
                 <!-- 新的操作按钮 -->
                 <button id="edit-message-btn">编辑消息</button>
                 <button id="copy-message-btn">复制文本</button>
+            <button id="copy-timestamp-btn">复制时间戳</button>
                 <button id="recall-message-btn">撤回</button>
                 <button id="publish-to-announcement-btn" style="display: none;">发布到公告板</button>
                 <button id="quote-message-btn">引用</button>
@@ -15335,7 +15371,41 @@ async function loadAllDataFromDB() {
         }
         // ▲▲▲ 替换结束 ▲▲▲
                 window.renderApiSettingsProxy = renderApiSettings;
-        
+ 
+/**
+         * 【全新】精准更新单个聊天项的预览和位置，而不是刷新整个列表
+         * @param {string} chatId - 需要更新的聊天ID
+         */
+        function updateChatListItem(chatId) {
+            const chat = state.chats[chatId];
+            if (!chat) {
+                console.error(`【Error】updateChatListItem failed: Chat with ID ${chatId} not found in state.`); // <-- Log
+                return;
+            }
+
+            const chatListEl = document.getElementById('chat-list');
+            // 核心修复：之前的选择器是 .chat-list-item，但实际上滑动项的最外层是 .chat-item-wrapper
+            const existingWrapper = chatListEl.querySelector(`.chat-item-wrapper[data-chat-id="${chatId}"]`);
+            
+            // 1. 创建一个新的、包含最新信息的列表项（的包装器）
+            const newWrapper = createChatListItem(chat);
+
+            // 2. 如果旧的列表项存在，就用新的替换它
+            if (existingWrapper) {
+                const parent = existingWrapper.parentNode;
+                parent.replaceChild(newWrapper, existingWrapper);
+
+                // 3. 如果这个聊天没有被置顶，就把它移动到最前面（非置顶区域的顶部）
+                if (!chat.isPinned) {
+                    const firstUnpinnedWrapper = chatListEl.querySelector('.chat-item-wrapper:not(:has(.pinned))');
+                    if (firstUnpinnedWrapper && firstUnpinnedWrapper !== newWrapper) {
+                        chatListEl.insertBefore(newWrapper, firstUnpinnedWrapper);
+                    }
+                }
+            } else {
+                chatListEl.prepend(newWrapper);
+            }
+        }
         // ▼▼▼ 【全新 | 全局置顶修复版】请用这个函数完整替换旧的 renderChatList ▼▼▼
 async function renderChatList() {
     const chatListEl = document.getElementById('chat-list');
@@ -15644,11 +15714,11 @@ async function renderChatList() {
         prependLoadMoreButton(messagesContainer);
     }
     
-    const typingIndicator = document.createElement('div');
+    /*const typingIndicator = document.createElement('div');
     typingIndicator.id = 'typing-indicator';
     typingIndicator.style.display = 'none';
     typingIndicator.textContent = '对方正在输入...';
-    messagesContainer.appendChild(typingIndicator);
+    messagesContainer.appendChild(typingIndicator);*/
     
     setTimeout(() => messagesContainer.scrollTop = messagesContainer.scrollHeight, 0);
 }
@@ -16677,44 +16747,47 @@ async function renderChatList() {
         }
         // ▲▲▲ 替换结束 ▲▲▲
         
-        /**
-         * 【V3.0 | 已延长间隔】将消息元素追加到聊天窗口
+/**
+         * 【V3.1 | 终极渲染修复版】将消息元素追加到聊天窗口
          */
         async function appendMessage(msg, chat, isInitialLoad = false) {
             const messagesContainer = document.getElementById('chat-messages');
-            const typingIndicator = document.getElementById('typing-indicator');
 
-            // --- 核心修改：判断时间间隔 ---
+            // --- 时间戳判断逻辑 (保持不变) ---
             const historyWithoutNewMsg = chat.history.slice(0, -1);
             const lastMessage = historyWithoutNewMsg.filter(m => !m.isHidden).pop();
-
-            // 将间隔从 300000 (5分钟) 延长到 3600000 (1小时)
             if (lastMessage && (msg.timestamp - lastMessage.timestamp > 3600000)) {
                 const timestampEl = createSystemTimestampElement(msg.timestamp);
-                messagesContainer.insertBefore(timestampEl, typingIndicator);
+                messagesContainer.appendChild(timestampEl);
             }
-            // --- 修改结束 ---
 
+            // --- 核心修改就在这里 ---
             const messageEl = await createMessageElement(msg, chat);
-            if (!messageEl) return;
-    // ▼▼▼ 在这里粘贴新代码 ▼▼▼
-    // 如果是AI发送的新消息（非初始加载），就播放提示音
-    if (msg.role === 'assistant' && !isInitialLoad) {
-        playNotificationSound();
-    }
-    // ▲▲▲ 新代码粘贴结束 ▲▲▲
+            if (!messageEl) {
+                console.error(`【Critical Error】appendMessage failed: createMessageElement returned null for timestamp ${msg.timestamp}`);
+                return;
+            }
+
+            // (播放提示音逻辑保持不变)
+            if (msg.role === 'assistant' && !isInitialLoad) {
+                playNotificationSound();
+            }
+
             if (!isInitialLoad) {
                 messageEl.classList.add('animate-in');
             }
           
-            messagesContainer.insertBefore(messageEl, typingIndicator);
+            // 【【【这就是最终的修复！】】】
+            // 我们不再使用复杂的 insertBefore，而是直接、可靠地使用 appendChild
+            messagesContainer.appendChild(messageEl);
             
             if (!isInitialLoad) {
+                // 滚动到底部的逻辑保持不变
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 currentRenderedCount++;
             }
         }
-        // ▲▲▲ 替换结束 ▲▲▲
+		// ▲▲▲ 替换结束 ▲▲▲
         
         /* ▼▼▼ 请用这个【新版本】的函数完整替换旧的 openChat 函数 ▼▼▼ */
         async function openChat(chatId) {
@@ -16848,14 +16921,14 @@ async function renderChatList() {
                 const { proxyUrl, apiKey, model } = state.apiConfig;
                 if (!proxyUrl || !apiKey || !model) {
                     alert('请先在API设置中配置反代地址、密钥并选择模型。');
-                    if (chat.isGroup) {
+                    /*if (chat.isGroup) {
                         if (typingIndicator) typingIndicator.style.display = 'none';
-                    } else {
+                    } else {*/
                          if (chatHeaderTitle && state.chats[chatId]) {
                             chatHeaderTitle.textContent = state.chats[chatId].name;
                             chatHeaderTitle.classList.remove('typing-status');
                         }
-                    }
+                    /*}*/
                     return;
                 }
         
@@ -18958,7 +19031,7 @@ chat.history.push(aiClaimedMessage);
                                 content: msgData.content
                             };
                             break;
-                        case 'quote_reply':
+                        case 'quote_reply': {
                             const originalMessage = chat.history.find(m => m.timestamp === msgData.target_timestamp);
                             if (originalMessage) {
                                 const quoteContext = {
@@ -18975,6 +19048,7 @@ chat.history.push(aiClaimedMessage);
                                 aiMessage = { ...baseMessage, content: msgData.reply_content };
                             }
                             break;
+						}
                         case 'send_and_recall': {
                             if (!isViewingThisChat) continue;
                             const tempMessageData = { ...baseMessage, content: msgData.content };
@@ -19129,11 +19203,11 @@ if (qzoneActionTaken) {
                 setAvatarActingState(chatId, false);
         
                
-                if (chat.isGroup) {
+                /*if (chat.isGroup) {
                     if (typingIndicator) {
                         typingIndicator.style.display = 'none';
                     }
-                } else {
+                } else {*/
                     if (chatHeaderTitle && state.chats[chatId]) {
                         chatHeaderTitle.style.opacity = 0;
                         setTimeout(() => {
@@ -19142,7 +19216,7 @@ if (qzoneActionTaken) {
                             chatHeaderTitle.style.opacity = 1;
                         }, 200);
                     }
-                }
+                /*}*/
                 renderChatList();
                 if (isViewingThisChat) {
                     checkAndTriggerAutoSummary(chatId);
@@ -20506,18 +20580,29 @@ for (const action of responseArray) {
                 }
         
                 const membersList = chat.members.map(m => `- **${m.groupNickname}** (本名: ${m.originalName}): ${m.persona}`).join('\n');
-        // ▼▼▼ 核心修改：在这里构建跨角色的长期记忆上下文 (和 triggerAiResponse 一样) ▼▼▼
+        // ▼▼▼ 核心修改：在构建记忆上下文时，加入过滤逻辑 ▼▼▼
         let longTermMemoryContext = '# 长期记忆 (最高优先级，这是群内已经确立的事实，所有角色必须严格遵守)\n';
         let collectedMemories = false;
+        const hiddenTimestampsInGroup = new Set(chat.settings.hiddenMemoryTimestamps || []); // 获取当前群聊的隐藏列表
         
         chat.members.forEach(member => {
             const memberChat = state.chats[member.id];
             if (memberChat && memberChat.longTermMemory && memberChat.longTermMemory.length > 0) {
-                longTermMemoryContext += `\n## --- 关于“${member.groupNickname}”的记忆 ---\n`;
-                longTermMemoryContext += memberChat.longTermMemory.map(mem => `- ${mem.content}`).join('\n');
-                collectedMemories = true;
+                
+                // 核心：在 map 之前，先 filter 掉被隐藏的记忆
+                const visibleMemories = memberChat.longTermMemory
+                    .filter(mem => !hiddenTimestampsInGroup.has(mem.timestamp))
+                    .map(mem => `- ${mem.content}`)
+                    .join('\n');
+
+                if (visibleMemories) {
+                    longTermMemoryContext += `\n## --- 关于“${member.groupNickname}”的记忆 ---\n`;
+                    longTermMemoryContext += visibleMemories;
+                    collectedMemories = true;
+                }
             }
         });
+        // ▲▲▲ 修复结束 ▲▲▲
 
         if (!collectedMemories) {
             longTermMemoryContext += '- (暂无)';
@@ -21215,27 +21300,56 @@ image_prompt: msgData.image_prompt // <-- 【核心修复】在这里补上缺�
         }
         // ▲▲▲ 替换结束 ▲▲▲
         
-        /**
-         * 复制消息的文本内容到剪贴板
+/**
+         * 【V2.0 | 兼容移动端】复制消息的文本内容到剪贴板
          */
         async function copyMessageContent() {
             if (!activeMessageTimestamp) return;
             const chat = state.chats[state.activeChatId];
             const message = chat.history.find(m => m.timestamp === activeMessageTimestamp);
             if (!message) return;
-        
+
             let textToCopy;
             if (typeof message.content === 'object') {
                 textToCopy = JSON.stringify(message.content);
             } else {
                 textToCopy = String(message.content);
             }
-        
+
             try {
+                // 方案一：优先尝试现代、安全的 Clipboard API
                 await navigator.clipboard.writeText(textToCopy);
                 await showCustomAlert('复制成功', '消息内容已复制到剪贴板。');
+
             } catch (err) {
-                await showCustomAlert('复制失败', '无法访问剪贴板。');
+                // 方案二：如果方案一失败，则启动传统的 execCommand 备用方案
+                console.warn("Clipboard API 失败，启动备用复制方案:", err);
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                
+                // 让输入框在视觉上不可见
+                textArea.style.position = 'fixed';
+                textArea.style.top = '-9999px';
+                textArea.style.left = '-9999px';
+                
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        await showCustomAlert('复制成功', '消息内容已复制到剪贴板。');
+                    } else {
+                        throw new Error('document.execCommand("copy") 未能执行。');
+                    }
+                } catch (execErr) {
+                    console.error('备用复制方案也失败了:', execErr);
+                    await showCustomAlert('复制失败', '无法访问剪贴板，请检查浏览器权限或尝试在电脑上操作。');
+                }
+
+                // 无论成功与否，都移除临时输入框
+                document.body.removeChild(textArea);
             }
             
             hideMessageActions();
@@ -21373,36 +21487,6 @@ image_prompt: msgData.image_prompt // <-- 【核心修复】在这里补上缺�
         }
         // ▲▲▲ 替换结束 ▲▲▲
 
-        /**
-         * 复制消息的文本内容到剪贴板
-         */
-        async function copyMessageContent() {
-            if (!activeMessageTimestamp) return;
-            const chat = state.chats[state.activeChatId];
-            const message = chat.history.find(m => m.timestamp === activeMessageTimestamp);
-            if (!message) return;
-        
-            let textToCopy;
-            // 【【【核心修复3：在这里也添加对 offline_text 的判断】】】
-            if (message.type === 'offline_text') {
-                // 如果是线下模式，就将对话和描写组合成一个更易读的文本
-                textToCopy = `「${message.dialogue || ''}」\n${message.description || ''}`;
-            } else if (typeof message.content === 'object') {
-                textToCopy = JSON.stringify(message.content);
-            } else {
-                textToCopy = String(message.content);
-            }
-        
-            try {
-                await navigator.clipboard.writeText(textToCopy);
-                await showCustomAlert('复制成功', '消息内容已复制到剪贴板。');
-            } catch (err) {
-                await showCustomAlert('复制失败', '无法访问剪贴板。');
-            }
-            
-            hideMessageActions();
-        }
-        // ▲▲▲ 替换结束 ▲▲▲
         
         /**
          * 解析编辑后的文本，并返回一个标准化的消息片段对象
@@ -22177,89 +22261,99 @@ image_prompt: msgData.image_prompt // <-- 【核心修复】在这里补上缺�
         }
         
 /**
- * 【核心 | V3.0 终极总结修复版】结束视频通话
- */
-async function endVideoCall() {
-    if (!videoCallState.isActive) return;
+         * 【核心 | V3.0 终极总结修复版】结束视频通话
+         */
+        async function endVideoCall() {
+            if (!videoCallState.isActive) return;
 
-    const duration = Math.floor((Date.now() - videoCallState.startTime) / 1000);
-    const durationText = `${Math.floor(duration / 60)}分${duration % 60}秒`;
-    const endCallText = `通话结束，时长 ${durationText}`;
+            const duration = Math.floor((Date.now() - videoCallState.startTime) / 1000);
+            const durationText = `${Math.floor(duration / 60)}分${duration % 60}秒`;
+            const endCallText = `通话结束，时长 ${durationText}`;
 
-    const chat = state.chats[videoCallState.activeChatId];
-    if (chat) {
-        // 1. 保存完整的通话记录到数据库 (这部分逻辑不变，非常重要)
-        const participantsData = [];
-        if (videoCallState.isGroupCall) {
-            videoCallState.participants.forEach(p => participantsData.push({ name: p.originalName, avatar: p.avatar }));
-            if (videoCallState.isUserParticipating) {
-                participantsData.unshift({ name: chat.settings.myNickname || '我', avatar: chat.settings.myAvatar || defaultMyGroupAvatar });
+            const chat = state.chats[videoCallState.activeChatId];
+            if (chat) {
+                // 1. 保存完整的通话记录到数据库 (这部分逻辑不变，非常重要)
+                const participantsData = [];
+                if (videoCallState.isGroupCall) {
+                    videoCallState.participants.forEach(p => participantsData.push({ name: p.originalName, avatar: p.avatar }));
+                    if (videoCallState.isUserParticipating) {
+                        participantsData.unshift({ name: chat.settings.myNickname || '我', avatar: chat.settings.myAvatar || defaultMyGroupAvatar });
+                    }
+                } else {
+                    participantsData.push({ name: chat.name, avatar: chat.settings.aiAvatar || defaultAvatar });
+                    participantsData.unshift({ name: '我', avatar: chat.settings.myAvatar || defaultAvatar });
+                }
+
+                const callRecord = {
+                    chatId: videoCallState.activeChatId,
+                    timestamp: Date.now(),
+                    duration: duration,
+                    participants: participantsData,
+                    transcript: [...videoCallState.callHistory]
+                };
+                await db.callRecords.add(callRecord);
+                console.log("通话记录已保存:", callRecord);
+                
+                // 2. 在聊天记录里添加对用户可见的“通话结束”消息 (逻辑不变)
+                let summaryMessage = {
+                    role: videoCallState.initiator === 'user' ? 'user' : 'assistant',
+                    content: endCallText,
+                    timestamp: Date.now(),
+                };
+                if (chat.isGroup && summaryMessage.role === 'assistant') {
+                    summaryMessage.senderName = videoCallState.callRequester || chat.members[0]?.originalName || chat.name;
+                }
+                chat.history.push(summaryMessage);
+
+                // ▼▼▼ 【【【核心修复就在这里！】】】 ▼▼▼
+                
+                // 3. 【全新】将完整的通话记录“翻译”成一段AI能理解的文本
+                const callTranscriptForAI = videoCallState.callHistory.map(h => {
+                    const sender = h.role === 'user' ? (chat.settings.myNickname || '我') : h.senderName;
+                    return `${sender}: ${h.content}`;
+                }).join('\n');
+                
+                // 4. 【全新 | 带错误处理】在后台调用总结函数
+                // 我们在这里不使用 await，让它在后台静默执行，不阻塞UI
+                // 虚构一个临时的 record 对象
+				const tempRecordForSummary = { timestamp: videoCallState.startTime };
+				summarizeCallTranscript(chat.id, callTranscriptForAI, false, tempRecordForSummary)
+                    .then(success => {
+                        if (success) {
+                            console.log("后台通话总结成功。");
+                        }
+                    })
+                    .catch(error => {
+                        // 如果后台总结失败，就在控制台打印一个错误，但不会打扰用户
+                        console.error("后台通话总结失败:", error);
+                    });
+
+                // 5. 【全新】创建一个对用户隐藏的、简短的系统消息，让AI对通话结束这件事本身做出反应
+                const hiddenReactionInstruction = {
+                    role: 'system',
+                    content: `[系统指令：视频通话刚刚结束。请你以角色的口吻，向用户主动发送一两条消息，来自然地总结这次通话的要点、确认达成的约定，或者表达你的感受。]`,
+                    timestamp: Date.now() + 1, // 确保时间戳在“通话结束”消息之后
+                    isHidden: true // 这个标记确保用户看不到这条指令
+                };
+                chat.history.push(hiddenReactionInstruction);
+                // ▲▲▲ 【【【修复结束】】】 ▲▲▲
+
+                // 6. 保存所有更新到数据库
+                await db.chats.put(chat);
             }
-        } else {
-            participantsData.push({ name: chat.name, avatar: chat.settings.aiAvatar || defaultAvatar });
-            participantsData.unshift({ name: '我', avatar: chat.settings.myAvatar || defaultAvatar });
+            
+            // 7. 清理和重置状态 (逻辑不变)
+            clearInterval(callTimerInterval);
+            callTimerInterval = null;
+            videoCallState = { isActive: false, isAwaitingResponse: false, isGroupCall: false, activeChatId: null, initiator: null, startTime: null, participants: [], isUserParticipating: true, callHistory: [], preCallContext: "" };
+            
+            // 8. 返回聊天界面，并触发AI对通话结束的反应
+            if (chat) {
+                openChat(chat.id);
+                triggerAiResponse();
+            }
         }
 
-        const callRecord = {
-            chatId: videoCallState.activeChatId,
-            timestamp: Date.now(),
-            duration: duration,
-            participants: participantsData,
-            transcript: [...videoCallState.callHistory]
-        };
-        await db.callRecords.add(callRecord);
-        console.log("通话记录已保存:", callRecord);
-        
-        // 2. 在聊天记录里添加对用户可见的“通话结束”消息 (逻辑不变)
-        let summaryMessage = {
-            role: videoCallState.initiator === 'user' ? 'user' : 'assistant',
-            content: endCallText,
-            timestamp: Date.now(),
-        };
-        if (chat.isGroup && summaryMessage.role === 'assistant') {
-            summaryMessage.senderName = videoCallState.callRequester || chat.members[0]?.originalName || chat.name;
-        }
-        chat.history.push(summaryMessage);
-
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        //            这就是本次修改的核心所在！
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        
-        // 3. 【全新】将完整的通话记录“翻译”成一段AI能理解的文本
-        const callTranscriptForAI = videoCallState.callHistory.map(h => {
-            const sender = h.role === 'user' ? (chat.settings.myNickname || '我') : h.senderName;
-            return `${sender}: ${h.content}`;
-        }).join('\n');
-        
-        // 4. 【全新】在后台调用总结函数，它会自动处理API调用和记忆存储
-        // 我们在这里不使用 await，让它在后台静默执行，不阻塞UI
-        summarizeCallTranscript(chat.id, callTranscriptForAI);
-
-        // 5. 【全新】创建一个对用户隐藏的、简短的系统消息，让AI对通话结束这件事本身做出反应
-        const hiddenReactionInstruction = {
-            role: 'system',
-            content: `[系统指令：视频通话刚刚结束。请你以角色的口吻，向用户主动发送一两条消息，来自然地总结这次通话的要点、确认达成的约定，或者表达你的感受。]`,
-            timestamp: Date.now() + 1, // 确保时间戳在“通话结束”消息之后
-            isHidden: true // 这个标记确保用户看不到这条指令
-        };
-        chat.history.push(hiddenReactionInstruction);
-
-        // 6. 保存所有更新到数据库
-        await db.chats.put(chat);
-    }
-    
-    // 7. 清理和重置状态 (逻辑不变)
-    clearInterval(callTimerInterval);
-    callTimerInterval = null;
-    videoCallState = { isActive: false, isAwaitingResponse: false, isGroupCall: false, activeChatId: null, initiator: null, startTime: null, participants: [], isUserParticipating: true, callHistory: [], preCallContext: "" };
-    
-    // 8. 返回聊天界面，并触发AI对通话结束的反应
-    if (chat) {
-        openChat(chat.id);
-        triggerAiResponse();
-    }
-}
-        // ▲▲▲ 替换结束 ▲▲▲
         
         /**
          * 【全新】更新通话界面的参与者头像网格
@@ -24527,9 +24621,9 @@ async function endVideoCall() {
             showScreen('long-term-memory-screen');
         }
         // ▲▲▲ 替换结束 ▲▲▲
-        // ▼▼▼ 【请用这个支持记忆互通的全新版本】替换旧的 renderLongTermMemoryList 函数 ▼▼▼
-        /**
-         * 渲染长期记忆列表 (记忆互通版)
+
+/**
+         * 【V3.0 | 最终修复版 | 功能分离】渲染长期记忆列表
          */
         function renderLongTermMemoryList() {
             const container = document.getElementById('memory-list-container');
@@ -24537,64 +24631,82 @@ async function endVideoCall() {
             container.innerHTML = '';
         
             let memoriesToDisplay = [];
+            const isGroupView = chat.isGroup;
+            // 获取当前群聊的隐藏列表（如果有）
+            const hiddenTimestamps = (isGroupView && chat.settings.hiddenMemoryTimestamps) ? new Set(chat.settings.hiddenMemoryTimestamps) : new Set();
 
-            // ▼▼▼ 核心修改：在这里收集所有需要显示的记忆 ▼▼▼
-            if (chat.isGroup) {
-                // 如果是群聊，遍历成员收集记忆
+            if (isGroupView) {
                 chat.members.forEach(member => {
                     const memberChat = state.chats[member.id];
                     if (memberChat && memberChat.longTermMemory) {
-                        // 为每条记忆附加上作者信息，方便显示
                         const memberMemories = memberChat.longTermMemory.map(mem => ({
                             ...mem,
-                            authorName: member.groupNickname, // 使用群昵称
-                            authorChatId: member.id, // 保存原始单聊ID
+                            authorName: member.groupNickname,
+                            authorChatId: member.id,
+                            // 【核心新增1】为每条记忆增加一个 isHidden 状态
+                            isHidden: hiddenTimestamps.has(mem.timestamp) 
                         }));
                         memoriesToDisplay.push(...memberMemories);
                     }
                 });
             } else {
-                // 如果是单聊，直接使用自己的记忆
                 if (chat.longTermMemory) {
                     memoriesToDisplay = chat.longTermMemory.map(mem => ({
                         ...mem,
-                        authorName: chat.name, // 作者就是角色自己
+                        authorName: chat.name,
                         authorChatId: chat.id,
+                        isHidden: false // 单聊不存在隐藏状态
                     }));
                 }
             }
-            // ▲▲▲ 修改结束 ▲▲▲
 
             if (memoriesToDisplay.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color: var(--text-secondary); margin-top: 50px;">这里还没有任何长期记忆。</p>';
                 return;
             }
 
-            // 按时间倒序排列所有收集到的记忆
             memoriesToDisplay.sort((a, b) => b.timestamp - a.timestamp);
         
             memoriesToDisplay.forEach((memory, index) => {
                 const item = document.createElement('div');
                 item.className = 'memory-card'; 
                 item.style.cursor = 'default';
+                // 如果记忆被隐藏，给它一个半透明的样式以作区分
+                if (memory.isHidden) {
+                    item.style.opacity = '0.5';
+                }
         
+                // 【核心新增2】根据是否在群聊中，动态生成“隐藏/恢复”按钮
+                let visibilityButtonHtml = '';
+                if (isGroupView) {
+                    const icon = memory.isHidden 
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>` // 隐藏状态：带斜杠的眼睛
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`; // 可见状态：正常的眼睛
+                    
+                    visibilityButtonHtml = `
+                        <button class="memory-action-btn toggle-visibility-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="${memory.isHidden ? '恢复显示' : '在此群隐藏'}">
+                            ${icon}
+                        </button>
+                    `;
+                }
+
                 item.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div class="content" style="padding: 0; flex-grow: 1;">
-                            <!-- 新增：显示记忆来源 -->
                             <div style="font-size: 0.8em; color: #999; margin-bottom: 5px;">
-                                [ ${memory.authorName} 的记忆 ]
+                                [ ${memory.authorName} 的记忆 ] ${memory.isHidden ? '<span style="color: #fca43d;">(已隐藏)</span>' : ''}
                             </div>
                             ${memory.content.replace(/\n/g, '<br>')}
                         </div>
                         <div style="display: flex; gap: 8px; flex-shrink: 0; margin-left: 15px;">
+                            ${visibilityButtonHtml}
                             <button class="memory-action-btn edit-memory-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="编辑">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </button>
-                            <button class="memory-action-btn delete-memory-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="删除">
+                            <button class="memory-action-btn delete-memory-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="永久删除">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -24606,7 +24718,35 @@ async function endVideoCall() {
                 container.appendChild(item);
             });
         }
-        // ▲▲▲ 替换结束 ▲▲▲
+
+
+/**
+ * 【全新】切换指定记忆在当前群聊中的可见性（隐藏/恢复）
+ * @param {string} authorChatId - 记忆所属角色的单聊ID
+ * @param {number} memoryTimestamp - 要操作的记忆的时间戳
+ */
+async function toggleMemoryVisibilityInGroup(authorChatId, memoryTimestamp) {
+    const groupChat = state.chats[state.activeChatId];
+    if (!groupChat || !groupChat.isGroup) return;
+
+    if (!groupChat.settings.hiddenMemoryTimestamps) {
+        groupChat.settings.hiddenMemoryTimestamps = [];
+    }
+
+    const isCurrentlyHidden = groupChat.settings.hiddenMemoryTimestamps.includes(memoryTimestamp);
+
+    if (isCurrentlyHidden) {
+        // 如果是隐藏的 -> 恢复显示
+        groupChat.settings.hiddenMemoryTimestamps = groupChat.settings.hiddenMemoryTimestamps.filter(ts => ts !== memoryTimestamp);
+    } else {
+        // 如果是显示的 -> 隐藏
+        groupChat.settings.hiddenMemoryTimestamps.push(memoryTimestamp);
+    }
+
+    await db.chats.put(groupChat);
+    renderLongTermMemoryList(); // 重新渲染列表以更新UI
+}
+
         
 async function handleAddManualMemory() {
     const chat = state.chats[state.activeChatId];
@@ -24633,6 +24773,37 @@ async function handleAddManualMemory() {
         renderLongTermMemoryList();
     }
 }
+
+
+/**
+ * 【全新】在指定的群聊中“隐藏”一条长期记忆，而不是永久删除
+ * @param {string} groupId - 目标群聊的ID
+ * @param {string} authorChatId - 记忆所属角色的单聊ID
+ * @param {number} memoryTimestamp - 要隐藏的记忆的时间戳
+ */
+async function handleHideMemoryInGroup(groupId, authorChatId, memoryTimestamp) {
+    const groupChat = state.chats[groupId];
+    if (!groupChat || !groupChat.isGroup) return;
+
+    // 1. 初始化隐藏列表（如果还不存在）
+    if (!groupChat.settings.hiddenMemoryTimestamps) {
+        groupChat.settings.hiddenMemoryTimestamps = [];
+    }
+
+    // 2. 将要隐藏的记忆时间戳添加到列表中（如果尚未存在）
+    if (!groupChat.settings.hiddenMemoryTimestamps.includes(memoryTimestamp)) {
+        groupChat.settings.hiddenMemoryTimestamps.push(memoryTimestamp);
+        
+        // 3. 保存对群聊对象的修改
+        await db.chats.put(groupChat);
+        
+        // 4. 刷新UI
+        renderLongTermMemoryList();
+        await showCustomAlert('成功', '该条记忆已在此群聊中隐藏。');
+    } else {
+        await showCustomAlert('提示', '该条记忆已经处于隐藏状态。');
+    }
+}
         
         // ▼▼▼ 【请用这两个支持记忆互通的新版本】替换旧的 handleEditMemory 和 handleDeleteMemory 函数 ▼▼▼
         /**
@@ -24654,17 +24825,24 @@ async function handleEditMemory(authorChatId, memoryTimestamp) {
     }
 }
 
-async function handleDeleteMemory(authorChatId, memoryTimestamp) {
-    const confirmed = await showCustomConfirm('确认删除', '确定要删除这条长期记忆吗？', { confirmButtonClass: 'btn-danger' });
-    if (confirmed) {
-        const authorChat = state.chats[authorChatId];
-        if (!authorChat || !authorChat.longTermMemory) return;
-        authorChat.longTermMemory = authorChat.longTermMemory.filter(m => m.timestamp !== memoryTimestamp);
-        await db.chats.put(authorChat);
-        renderLongTermMemoryList();
-    }
-}
-        // ▲▲▲ 替换结束 ▲▲▲
+		async function handleDeleteMemory(authorChatId, memoryTimestamp) {
+            // 【【【核心修复：在这里添加确认弹窗】】】
+            const authorChat = state.chats[authorChatId];
+            if (!authorChat) return;
+
+            const confirmed = await showCustomConfirm(
+                '确认永久删除', 
+                `你确定要【永久删除】“${authorChat.name}”的这条记忆吗？<br><br><strong style="color: #ff3b30;">此操作不可恢复，将影响所有引用了该记忆的聊天！</strong>`, 
+                { confirmButtonClass: 'btn-danger', confirmText: '确认删除' }
+            );
+
+            if (confirmed) {
+                if (!authorChat.longTermMemory) return;
+                authorChat.longTermMemory = authorChat.longTermMemory.filter(m => m.timestamp !== memoryTimestamp);
+                await db.chats.put(authorChat);
+                renderLongTermMemoryList();
+            }
+        }
         
         /**
          * 【核心】手动触发对话总结
@@ -24693,101 +24871,172 @@ async function handleDeleteMemory(authorChatId, memoryTimestamp) {
             }
         }
 /**
- * 【V2.0 | 错误处理增强版】专门用于总结通话记录并存入长期记忆的核心函数
- * @param {string} chatId - 目标聊天的ID
- * @param {string} transcriptText - 格式化后的通话文字记录
- * @returns {Promise<boolean>} - 返回一个Promise，成功时解析为true，失败时会抛出错误。
- */
-async function summarizeCallTranscript(chatId, transcriptText) {
-    const chat = state.chats[chatId];
-    if (!chat || !transcriptText) {
-        // 如果基础数据就有问题，直接抛出错误
-        throw new Error("基础数据不完整，无法开始总结。");
-    }
+         * 【V4.1 | 返回值增强版】专门用于总结通话记录并存入长期记忆的核心函数
+         * @param {string} chatId - 目标聊天的ID
+         * @param {string} transcriptText - 格式化后的通话文字记录
+         * @param {boolean} returnOnly - 如果为true, 则只返回总结文本，不执行保存操作
+         * @returns {Promise<string|boolean>} - 如果 returnOnly 为 true, 返回总结文本；否则返回布尔值表示是否成功。
+         */
+        async function summarizeCallTranscript(chatId, transcriptText, returnOnly = false, record = null)  {
+            const chat = state.chats[chatId];
+            if (!chat || !transcriptText) {
+                throw new Error("基础数据不完整，无法开始总结。");
+            }
 
-    const userNickname = state.qzoneSettings.nickname || '用户';
+            // ... (你提供的所有systemPrompt构建逻辑保持不变)
+            const userNickname = state.qzoneSettings.nickname || '用户';
+            let systemPrompt;
+            let targetMemoryChat = chat; 
 
-    // ▼▼▼ 【终极修复 V2 | 放弃JSON】▼▼▼
-    const systemPrompt = `
+            if (chat.isGroup) {
+                let protagonist = null; 
+                if (videoCallState.callRequester) {
+                    protagonist = chat.members.find(m => m.originalName === videoCallState.callRequester);
+                }
+                if (!protagonist) {
+                    protagonist = chat.members.find(m => m.id !== 'user' && videoCallState.participants.some(p => p.id === m.id));
+                }
+                if (!protagonist) {
+                    protagonist = chat.members.find(m => m.id !== 'user');
+                }
+
+                if (!protagonist) {
+                    throw new Error("群聊通话中没有找到可作为总结主体的AI角色。");
+                }
+                
+                const protagonistChat = state.chats[protagonist.id];
+                if (!protagonistChat) {
+                     throw new Error(`找不到主角 “${protagonist.groupNickname}” 的详细角色信息。`);
+                }
+                
+                const userPersonaInGroup = chat.settings.myPersona || '(未设置)';
+
+                systemPrompt = `
 # 你的任务
-你是一个对话摘要专家。你的唯一任务是阅读下面的【视频通话记录】，并将其浓缩成【一段】流畅、连贯、客观、并且【极其精简】的摘要。
+你就是角色“${protagonist.originalName}”。请你回顾一下刚才和 “${userNickname}” 以及其他群成员的【群组视频通话】，然后用【第一人称 ("我")】的口吻，总结出一段简短的、包含核心事件和心理活动的回忆。
 
-# 核心规则 (必须严格遵守！)
-1.  **【【【长度铁律】】】**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
-2.  **【客观事实】**: 只记录通话中发生的最关键的事实、确认的约定或角色的核心情感变化。
-3.  **【第三人称与命名】**: 必须使用第三人称。请严格使用“${userNickname}”（代表用户）和“${chat.originalName}”（代表AI角色）来指代对话双方。
-4.  **【【【输出格式铁律】】】**: 你的回复【必须且只能】是总结好的【纯文本摘要内容】，绝对不要包含任何JSON格式、引号、或者 "summary": 等字样。
+# 核心规则
+1.  **视角铁律**: 你的总结【必须】使用【主观的第一人称视角 ("我")】来写。
+2.  **内容核心**: 你的回忆应该包含：
+    *   **剧情回顾**: 刚才我们在群聊通话里聊了什么关键的事？其他人都说了什么？
+    *   **心理活动**: 我当时心里是怎么想的？有什么感觉？
+3.  **长度铁律**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
+4.  **口吻与人设**: 你的语气【必须】严格符合你的角色设定。
+5.  **输出格式**: 你的回复【必须且只能】是一个JSON对象，格式如下：
+    \`{"summary": "在这里写下你以第一人称视角，总结好的核心回忆。"}\`
 
-# 待总结的视频通话记录
+# 你的角色设定 (必须严格遵守)
+${protagonistChat.settings.aiPersona}
+
+# 你的聊天对象（用户）的人设
+${userPersonaInGroup}
+
+# 待总结的群组视频通话记录
+- **通话发生时间**: ${new Date(record.timestamp).toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })}
+- **通话内容**: 
 ${transcriptText}
 
-现在，请严格遵守以上所有规则，直接输出那段不超过80个字的摘要文本。
-`;
-    // ▲▲▲ 修复结束 ▲▲▲
+现在，请以“${protagonist.originalName}”的身份，开始你的回忆。`;
+                
+                targetMemoryChat = protagonistChat;
 
-    // ▲▲▲ 核心修改从这里开始 ▲▲▲
-    try {
-        const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
-        const { proxyUrl, apiKey, model } = useSecondaryApi ? 
-            { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel } : 
-            state.apiConfig;
+            } else {
+                systemPrompt = `
+# 你的任务
+你就是角色“${chat.originalName}”。请你回顾一下刚才和“${userNickname}”的视频通话，然后用【第一人称 ("我")】的口吻，总结出一段简短的、包含核心事件和心理活动的回忆。
 
-        if (!proxyUrl || !apiKey || !model) throw new Error('API未配置，无法进行总结。');
+# 核心规则
+1.  **视角铁律**: 你的总结【必须】使用【主观的第一人称视角 ("我")】来写。
+2.  **内容核心**: 你的回忆应该包含：
+    *   **剧情回顾**: 刚才我们聊了什么关键的事？
+    *   **心理活动**: 我当时心里是怎么想的？有什么感觉？
+3.  **长度铁律**: 你的总结【必须】非常简短，总长度【绝对不能超过80个字】。
+4.  **口吻与人设**: 你的语气【必须】严格符合你的角色设定。
+5.  **输出格式**: 你的回复【必须且只能】是一个JSON对象，格式如下：
+    \`{"summary": "在这里写下你以第一人称视角，总结好的核心回忆。"}\`
 
-        let isGemini = proxyUrl.includes('generativelanguage');
-        let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, [{ role: 'user', content: "请开始总结。" }]);
+# 你的角色设定
+${chat.settings.aiPersona}
 
-        const response = isGemini 
-            ? await fetch(geminiConfig.url, geminiConfig.data) 
-            : await fetch(`${proxyUrl}/v1/chat/completions`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`},
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: "请开始总结。"}],
-                    temperature: 0.1, max_tokens: 500
-                })
-            });
+# 你的聊天对象（用户）的人设
+${chat.settings.myPersona}
 
-        if (!response.ok) {
-             const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
-             throw new Error(`API 请求失败: ${response.status} - ${errorData.error.message}`);
+# 待总结的视频通话记录
+- **通话发生时间**: ${new Date(record.timestamp).toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })}
+- **通话内容**: 
+${transcriptText}
+
+现在，请以“${chat.originalName}”的身份，开始你的回忆。`;
+            }
+
+            try {
+                // ... (API请求部分的代码保持不变) ...
+                const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
+                const { proxyUrl, apiKey, model } = useSecondaryApi ? 
+                    { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel } : 
+                    state.apiConfig;
+
+                if (!proxyUrl || !apiKey || !model) throw new Error('API未配置，无法进行总结。');
+
+                let isGemini = proxyUrl.includes('generativelanguage');
+                let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, [{ role: 'user', content: "请开始总结。" }]);
+
+                const response = isGemini 
+                    ? await fetch(geminiConfig.url, geminiConfig.data) 
+                    : await fetch(`${proxyUrl}/v1/chat/completions`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`},
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: "请开始总结。"}],
+                            temperature: 0.1
+                        })
+                    });
+
+                if (!response.ok) {
+                     const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+                     throw new Error(`API 请求失败: ${response.status} - ${errorData.error.message}`);
+                }
+                
+                const data = await response.json();
+                let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
+                rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+                const result = JSON.parse(rawContent);
+
+                if (result.summary && result.summary.trim()) {
+                    const summaryText = `(在那次${chat.isGroup ? '群聊' : ''}通话中，${result.summary.trim()})`;
+
+                    // ▼▼▼ 核心修改：根据 returnOnly 参数决定是返回还是直接保存 ▼▼▼
+                    if (returnOnly) {
+                        return summaryText; // 手动总结时，只返回文本
+                    } else {
+                        // 自动总结时，直接保存
+                        const newMemoryEntry = {
+                            content: summaryText,
+                            timestamp: Date.now(),
+                            source: chat.isGroup ? 'group_call_summary' : 'call_summary'
+                        };
+                        if (!targetMemoryChat.longTermMemory) targetMemoryChat.longTermMemory = [];
+                        targetMemoryChat.longTermMemory.push(newMemoryEntry);
+                        await db.chats.put(targetMemoryChat);
+                        console.log(`通话记录已成功总结并存入角色“${targetMemoryChat.name}”的长期记忆中。`);
+                        
+                        // 【新增】自动总结成功后，弹出提示
+                        await showCustomAlert("自动总结完成", `已为“${targetMemoryChat.name}”生成了一条关于本次通话的长期记忆。`);
+                        
+                        return true;
+                    }
+                    // ▲▲▲ 修改结束 ▲▲▲
+
+                } else {
+                    throw new Error("AI返回了空的或格式不正确的总结内容。");
+                }
+
+            } catch (error) {
+                console.error("总结通话记录时出错:", error);
+                throw error;
+            }
         }
-        
-   // ▼▼▼ 【终极修复 V2 | 纯文本处理逻辑】▼▼▼
-    const data = await response.json();
-    const summaryText = (isGemini ? getGeminiResponseText(data) : data.choices[0].message.content).trim();
-    
-    console.log("通话总结时，AI返回的原始响应 (纯文本):\n---", summaryText, "\n---");
-
-    // 【关键】直接检查纯文本摘要的有效性
-    if (summaryText && summaryText.length >= 10) { // 要求摘要至少有10个字符
-        const newMemoryEntry = {
-            content: `(在那次视频通话中，${summaryText})`,
-            timestamp: Date.now(),
-            source: 'call_summary'
-        };
-        
-        if (!chat.longTermMemory) {
-            chat.longTermMemory = [];
-        }
-        
-        chat.longTermMemory.push(newMemoryEntry);
-        await db.chats.put(chat);
-        console.log("通话总结成功！存入长期记忆:", newMemoryEntry.content);
-        return true;
-    } else {
-        // 如果AI返回空内容或太短，就抛出错误
-        throw new Error(`AI返回了空的或过短的总结内容。原始返回: "${summaryText}"`);
-    }
-    // ▲▲▲ 修复结束 ▲▲▲
-
-    } catch (error) {
-        console.error("总结通话记录时出错:", error);
-        throw error;
-    }
-}
-// ▲▲▲ 终极修复结束 ▲▲▲
 
 
 // ▼▼▼ 【终极智能版 | V2.0】robustJsonParse 函数 ▼▼▼
@@ -24841,16 +25090,16 @@ function robustJsonParse(rawContent) {
 // ▲▲▲ 修复结束 ▲▲▲
 
 
-        /**
-         * 【全新V3.0 | 支持自定义字数 | 记忆互通版 | 终极容错】手动触发对【现有长期记忆】的总结和精炼
+/**
+         * 【V3.0 | 支持自定义字数 | 记忆互通版 | 终极容错 | 用户确认 | 可选条数 | 最终修复版】手动触发对【现有长期记忆】的总结和精炼
          * @param {string} chatId - 当前聊天的ID (可能是群聊ID)
          */
         async function summarizeExistingLongTermMemory(chatId) {
             let chat = state.chats[chatId];
             if (!chat) return;
-        
+
             let targetChatForRefine = chat; 
-        
+
             if (chat.isGroup) {
                 const memberOptions = chat.members
                     .map(member => {
@@ -24863,26 +25112,63 @@ function robustJsonParse(rawContent) {
                         }
                         return null;
                     }).filter(Boolean); 
-        
+
                 if (memberOptions.length === 0) {
                     alert("群聊中没有成员有足够（2条以上）的记忆可供精炼。");
                     return;
                 }
-        
+
                 const selectedMemberId = await showChoiceModal('选择要精炼记忆的角色', memberOptions);
-        
+
                 if (!selectedMemberId) return;
-        
+
                 targetChatForRefine = state.chats[selectedMemberId];
             }
-        
+
             if (!targetChatForRefine.longTermMemory || targetChatForRefine.longTermMemory.length < 2) {
                 alert(`“${targetChatForRefine.name}”的长期记忆少于2条，无需进行精炼。`);
                 return;
             }
-        
+            
+            const totalMemories = targetChatForRefine.longTermMemory.length;
+            const choice = await showChoiceModal('选择精炼范围', [
+                { text: `全部记忆 (${totalMemories}条)`, value: 'all' },
+                { text: `最近 20 条`, value: '20' },
+                { text: `最近 50 条`, value: '50' },
+                { text: `最近 100 条`, value: '100' },
+                { text: '自定义数量...', value: 'custom' }
+            ].filter(opt => opt.value === 'all' || opt.value === 'custom' || parseInt(opt.value) < totalMemories)
+            );
+
+            if (choice === null) return;
+
+            let memoriesToRefine;
+            let countToRefine = totalMemories;
+
+            if (choice === 'all') {
+                memoriesToRefine = [...targetChatForRefine.longTermMemory];
+            } else if (choice === 'custom') {
+                const customCountStr = await showCustomPrompt('自定义数量', `请输入要精炼的最近记忆条数 (最多 ${totalMemories} 条)`);
+                if (customCountStr === null) return;
+                const customCount = parseInt(customCountStr);
+                if (isNaN(customCount) || customCount < 2 || customCount > totalMemories) {
+                    alert(`请输入一个 2 到 ${totalMemories} 之间的有效数字。`);
+                    return;
+                }
+                countToRefine = customCount;
+                memoriesToRefine = targetChatForRefine.longTermMemory.slice(-countToRefine);
+            } else {
+                countToRefine = parseInt(choice);
+                if (countToRefine >= totalMemories) {
+                    memoriesToRefine = [...targetChatForRefine.longTermMemory];
+                    countToRefine = totalMemories;
+                } else {
+                    memoriesToRefine = targetChatForRefine.longTermMemory.slice(-countToRefine);
+                }
+            }
+            
             const wordCountStr = await showCustomPrompt(
-                `为“${targetChatForRefine.name}”精炼记忆`,
+                "设置精炼字数",
                 "请输入精炼后核心记忆的大致字数：",
                 "150"
             );
@@ -24894,98 +25180,141 @@ function robustJsonParse(rawContent) {
                 alert("请输入一个有效的数字（建议大于20）。");
                 return;
             }
-        
+
+            // ▼▼▼ 核心修改：我们把第一个确认框注释掉了！▼▼▼
+            /*
             const confirmed = await showCustomConfirm(
                 '确认精炼记忆？',
-                `此操作会将“${targetChatForRefine.name}”的 ${targetChatForRefine.longTermMemory.length} 条长期记忆总结成大约 ${wordCount} 字的核心记忆。旧的记忆将被替换，此操作不可撤销。确定要继续吗？`,
+                `此操作会将选定的 ${countToRefine} 条长期记忆发送给AI，总结成大约 ${wordCount} 字的核心记忆。这些旧记忆将被替换，此操作不可撤销。确定要继续吗？`,
                 { confirmButtonClass: 'btn-danger', confirmText: '确认精炼' }
             );
-        
+
             if (!confirmed) return;
-        
-            const memoryContent = targetChatForRefine.longTermMemory.map(mem => `- ${mem.content}`).join('\n');
+            */
+            // ▲▲▲ 修改结束 ▲▲▲
+
+            // ▼▼▼ 核心修复：在这里过滤掉被隐藏的记忆 ▼▼▼
+        const currentContextChat = state.chats[state.activeChatId];
+        const isGroupContext = currentContextChat.isGroup;
+        const hiddenTimestamps = (isGroupContext && currentContextChat.settings.hiddenMemoryTimestamps) ? new Set(currentContextChat.settings.hiddenMemoryTimestamps) : new Set();
+
+        const memoriesToSend = memoriesToRefine.filter(mem => !hiddenTimestamps.has(mem.timestamp));
+
+        // 增加一道安全检查，如果过滤后可精炼的记忆少于2条，则中止
+        if (memoriesToSend.length < 2) {
+            alert(`在当前视图下，可见的、可供精炼的记忆不足2条，操作已取消。`);
+            return;
+        }
+
+        const memoryContent = memoriesToSend.map(mem => `- ${mem.content}`).join('\n');
+        // ▲▲▲ 修复结束 ▲▲▲
             const userNickname = state.qzoneSettings.nickname || '用户';
-        
+
+            // (你提供的强大的新版提示词，保持不变)
             const systemPrompt = `
 # 你的任务
-你是一个记忆整合专家。请阅读下面的“记忆要点列表”，并将它们整合成一个更加精炼、连贯的核心记忆摘要。
+你就是角色“${targetChatForRefine.originalName}”。请你回顾一下你和“${userNickname}”的长期记忆，然后用【第一人称 ("我")】的口吻，将它们整合成一个更加精炼、连贯、更高层次的核心记忆摘要。
 
-# 核心要求
-1.  **保留关键信息**: 请务必保留所有关键的人物、事件、设定和情感关系。
-2.  **消除冗余**: 请移除重复的、或已经不再重要的旧信息。
-3.  **客观视角**: 请使用客观的第三人称进行总结。并使用“${userNickname}”（代表用户）和“${targetChatForRefine.originalName}”（代表AI角色）来指代对话双方。
-4.  **长度要求**: 最终的摘要总长度应控制在 ${wordCount} 个字左右。
-5.  **格式要求**: 请确保你的回复是一个JSON对象，格式为：
-    \`{"summary": "在这里写下你整合并精炼后的核心记忆摘要。"}\`
+# 核心规则
+1.  **视角铁律**: 你的总结【必须】使用【主观的第一人称视角 ("我")】来写。
+2.  **内容核心**: 你的回忆应该包含：
+    * **剧情回顾**: 我和${userNickname}之间发生了什么关键的事？
+    * **心理活动**: 我当时心里是怎么想的？有什么感觉？
+3.  **保留关键信息**: 必须保留所有关键的人物、事件、设定和情感关系。绝对不能遗忘任何重要细节。
+4.  **口吻与人设**: 你的语气【必须】严格符合你的角色设定。
+5.  **输出格式**: 你的回复【必须且只能】是一个JSON对象，格式如下：
+    \`{"summary": "在这里写下你以第一人称视角，总结好的核心回忆。"}\`
+
+# 你的角色设定 (必须严格遵守)
+${targetChatForRefine.settings.aiPersona}
+
+# 你的聊天对象（用户）的人设
+${targetChatForRefine.settings.myPersona}
 
 # 待整合的记忆要点列表
 ${memoryContent}
 
-请根据以上要求开始你的工作。
-`;
-        
+现在，请以“${targetChatForRefine.originalName}”的身份，开始你的回忆总结。`;
+              
             await showCustomAlert("请稍候...", "正在请求AI进行记忆精炼...");
-        
+
             try {
                 const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
-                const { proxyUrl, apiKey, model } = useSecondaryApi
-                    ? { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel }
+                const { proxyUrl, apiKey, model } = useSecondaryApi 
+                    ? { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel } 
                     : state.apiConfig;
-        
-                if (!proxyUrl || !apiKey || !model) throw new Error('API未配置');
-        
+
+                if (!proxyUrl || !apiKey || !model) {
+                    throw new Error('请先在API设置中配置好（主或副）API以进行总结。');
+                }
+
                 let isGemini = proxyUrl.includes('generativelanguage');
                 let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, [{ role: 'user', content: "请开始整合。" }]);
-        
-                const response = isGemini
-                    ? await fetch(geminiConfig.url, geminiConfig.data)
+
+                const response = isGemini 
+                    ? await fetch(geminiConfig.url, geminiConfig.data) 
                     : await fetch(`${proxyUrl}/v1/chat/completions`, {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`},
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                         body: JSON.stringify({
                             model: model,
-                            messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: "请开始整合。"}],
-                            temperature: 0.1,
-                            max_tokens: wordCount + 500 // 留出一些余量
+                            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: "请开始整合。" }],
+                            temperature: 0.2,
                         })
                     });
-        
+
                 if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
-        
+
                 const data = await response.json();
-                const rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
-        
-                const result = robustJsonParse(rawContent);
-        
-                // ▼▼▼ 【【【核心修复就在这里！】】】 ▼▼▼
-                // 我们在这里增加了一个长度检查 (result.summary.trim().length > 10)
-                // 只有当AI返回的总结内容有效且长度超过10个字符时，才会执行覆盖操作。
-                if (result && result.summary && result.summary.trim().length > 10) {
-                    const newMemoryEntry = {
-                        content: result.summary.trim(),
-                        timestamp: Date.now(),
-                        source: 'refined'
-                    };
-        
-                    targetChatForRefine.longTermMemory = [newMemoryEntry];
-                    targetChatForRefine.lastMemorySummaryTimestamp = Date.now();
-                    await db.chats.put(targetChatForRefine);
+                let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
+                rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+                const result = JSON.parse(rawContent);
+
+                if (result.summary && typeof result.summary === 'string' && result.summary.trim()) {
                     
-                    if (document.getElementById('long-term-memory-screen').classList.contains('active')) {
-                        renderLongTermMemoryList();
+                    // ▼▼▼ 核心修改就在这里！▼▼▼
+                    // 我们将简单的 div 替换为带有样式的 blockquote，并优化了提示文字
+                    const userConfirmedReplacement = await showCustomConfirm(
+                        '精炼完成，请确认',
+                        `<p style="text-align: left; font-weight: bold; margin-bottom: 10px;">AI已将您选择的 ${countToRefine} 条旧记忆精炼为以下核心记忆：</p>
+                         <blockquote style="background: #f0f0f0; border-left: 3px solid #ccc; padding: 10px; margin: 0; text-align: left; white-space: pre-wrap;">${result.summary.trim()}</blockquote>
+                         <p style="margin-top: 15px;">确定要用这段新记忆替换掉旧的记忆吗？</p>`,
+                        { confirmText: '确认替换', cancelText: '保留旧的', confirmButtonClass: 'btn-danger' }
+                    );
+                    // ▲▲▲ 修改结束 ▲▲▲
+
+                    if (userConfirmedReplacement) {
+                        const newMemoryEntry = {
+                            content: result.summary.trim(),
+                            timestamp: Date.now(),
+                            source: 'refined'
+                        };
+            
+                        const startIndex = totalMemories - countToRefine;
+                        const memoriesToKeep = startIndex > 0 ? targetChatForRefine.longTermMemory.slice(0, startIndex) : [];
+                        targetChatForRefine.longTermMemory = [...memoriesToKeep, newMemoryEntry];
+                        
+                        targetChatForRefine.lastMemorySummaryTimestamp = Date.now();
+                        await db.chats.put(targetChatForRefine);
+                        
+                        if (document.getElementById('long-term-memory-screen').classList.contains('active')) {
+                            renderLongTermMemoryList();
+                        }
+                        await showCustomAlert('精炼成功', `已成功将 ${countToRefine} 条记忆精炼为 1 条核心记忆！`);
+                    } else {
+                        await showCustomAlert('操作已取消', '您的旧有记忆已被完整保留，未作任何修改。');
                     }
-                    await showCustomAlert('精炼成功', `已成功将“${targetChatForRefine.name}”的记忆精炼为 1 条核心记忆！`);
+                    
                 } else {
-                    // 如果AI返回空内容或无意义的短内容，就会进入这里，抛出错误并提示用户，而不会覆盖旧记忆。
-                    throw new Error(`AI返回了空的或无效的总结内容。您的原始记忆已被保留。\n\n原始返回: ${rawContent}`);
+                    throw new Error("AI返回了空的或格式不正确的总结内容。");
                 }
-                // ▲▲▲ 【【【修复结束】】】 ▲▲▲
-        
+
             } catch (error) {
                 console.error("精炼长期记忆时出错:", error);
-                await showCustomAlert('精炼失败', `操作失败，您的记忆未被修改: ${error.message}`);
+                await showCustomAlert('精炼失败', `操作失败，请检查API配置或稍后重试。\n错误信息: ${error.message}`);
             }
         }
+        // ▲▲▲ 替换结束 ▲▲▲
 // ▼▼▼ 【请用这个支持“个性化记忆注入”的最终版本】完整替换旧的 triggerAutoSummary 函数 ▼▼▼
 /**
  * 【核心】执行总结的API调用 (V7.1 - 个性化记忆注入 | 统一客观总结)
@@ -25143,6 +25472,7 @@ ${formattedHistory}
                 }
                 if (memoriesAddedCount > 0) {
                     // *** 修改点 1：移除弹窗，改为在控制台输出日志 ***
+                    await showCustomAlert('总结成功', `为 ${memoriesAddedCount} 位群成员生成并注入了个性化记忆！`);
                     console.log(`自动总结成功：为 ${memoriesAddedCount} 位群成员生成并注入了个性化记忆！`);
                 } else {
                     throw new Error("AI返回了空的或格式不正确的总结内容。");
@@ -25156,6 +25486,7 @@ ${formattedHistory}
                 chat.longTermMemory.push(newMemoryEntry);
                 await db.chats.put(chat);
                 // *** 修改点 2：移除弹窗，改为在控制台输出日志 ***
+                await showCustomAlert('总结成功', '已成功添加 1 条新的长期记忆！');
                 console.log('自动总结成功：已成功添加 1 条新的长期记忆！');
             } else {
                 throw new Error("AI返回了空的或格式不正确的总结内容。");
@@ -25405,98 +25736,123 @@ ${formattedHistory}
         // ▲▲▲ 替换结束 ▲▲▲
         
 /**
- * 【V2.0 | 支持手动总结 & 错误处理】显示指定通话记录的完整文字稿
- * @param {number} recordId - 通话记录的ID
- */
-async function showCallTranscript(recordId) {
-    const record = await db.callRecords.get(recordId);
-    if (!record) return;
+         * 【V2.0 | 支持手动总结 & 错误处理】显示指定通话记录的完整文字稿
+         * @param {number} recordId - 通话记录的ID
+         */
+        async function showCallTranscript(recordId) {
+            const record = await db.callRecords.get(recordId);
+            if (!record) return;
 
-    const modal = document.getElementById('call-transcript-modal');
-    const titleEl = document.getElementById('transcript-modal-title');
-    const bodyEl = document.getElementById('call-transcript-modal-body');
+            const modal = document.getElementById('call-transcript-modal');
+            const titleEl = document.getElementById('transcript-modal-title');
+            const bodyEl = document.getElementById('call-transcript-modal-body');
 
-    titleEl.textContent = `通话于 ${new Date(record.timestamp).toLocaleString()} (时长: ${Math.floor(record.duration / 60)}分${record.duration % 60}秒)`;
-    bodyEl.innerHTML = '';
-    
-    const deleteBtn = document.getElementById('delete-transcript-btn');
-    const summarizeBtn = document.getElementById('manual-summarize-btn');
-    
-    if (!record.transcript || record.transcript.length === 0) {
-        bodyEl.innerHTML = '<p style="text-align:center; color: #8a8a8a;">这次通话没有留下文字记录。</p>';
-        summarizeBtn.style.display = 'none';
-    } else {
-        summarizeBtn.style.display = 'block';
-        record.transcript.forEach(entry => {
-            const bubble = document.createElement('div');
-            bubble.className = `transcript-entry ${entry.role}`; 
-            bubble.textContent = entry.content;
-            bodyEl.appendChild(bubble);
-        });
-    }
+            titleEl.textContent = `通话于 ${new Date(record.timestamp).toLocaleString()} (时长: ${Math.floor(record.duration / 60)}分${record.duration % 60}秒)`;
+            bodyEl.innerHTML = '';
+            
+            const deleteBtn = document.getElementById('delete-transcript-btn');
+            const summarizeBtn = document.getElementById('manual-summarize-btn');
+            
+            if (!record.transcript || record.transcript.length === 0) {
+                bodyEl.innerHTML = '<p style="text-align:center; color: #8a8a8a;">这次通话没有留下文字记录。</p>';
+                summarizeBtn.style.display = 'none';
+            } else {
+                summarizeBtn.style.display = 'block';
+                record.transcript.forEach(entry => {
+                    const bubble = document.createElement('div');
+                    bubble.className = `transcript-entry ${entry.role}`; 
+                    bubble.textContent = entry.content;
+                    bodyEl.appendChild(bubble);
+                });
+            }
 
-    const newDeleteBtn = deleteBtn.cloneNode(true);
-    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-    const newSummarizeBtn = summarizeBtn.cloneNode(true);
-    summarizeBtn.parentNode.replaceChild(newSummarizeBtn, summarizeBtn);
-    
-    newDeleteBtn.addEventListener('click', async () => {
-        const confirmed = await showCustomConfirm(
-            "确认删除", "确定要永久删除这条通话记录吗？此操作不可恢复。", { confirmButtonClass: 'btn-danger' }
-        );
-        if (confirmed) {
-            modal.classList.remove('visible');
-            await db.callRecords.delete(recordId);
-            await renderCallHistoryScreen();
-            alert('通话记录已删除。');
+            const newDeleteBtn = deleteBtn.cloneNode(true);
+            deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+            const newSummarizeBtn = summarizeBtn.cloneNode(true);
+            summarizeBtn.parentNode.replaceChild(newSummarizeBtn, summarizeBtn);
+            
+            newDeleteBtn.addEventListener('click', async () => {
+                const confirmed = await showCustomConfirm(
+                    "确认删除", "确定要永久删除这条通话记录吗？此操作不可恢复。", { confirmButtonClass: 'btn-danger' }
+                );
+                if (confirmed) {
+                    modal.classList.remove('visible');
+                    await db.callRecords.delete(recordId);
+                    await renderCallHistoryScreen();
+                    alert('通话记录已删除。');
+                }
+            });
+
+            // ▼▼▼ 核心修改从这里开始 ▼▼▼
+            newSummarizeBtn.addEventListener('click', async () => {
+                modal.classList.remove('visible');
+                const chat = state.chats[record.chatId];
+                if (!chat) {
+                    alert('错误：找不到该通话记录所属的聊天对象。');
+                    return;
+                }
+
+                await showCustomAlert("请稍候...", "正在请求AI进行手动总结...");
+                
+                try {
+                    const transcriptText = record.transcript.map(h => {
+                        const sender = h.role === 'user' ? (chat.settings.myNickname || '我') : (h.senderName || chat.name);
+                        return `${sender}: ${h.content}`;
+                    }).join('\n');
+
+                    // 1. 调用总结函数，但这次我们不再直接依赖它的返回值
+                    // 而是让它把总结结果存入一个临时变量
+                    const summaryText = await summarizeCallTranscript(record.chatId, transcriptText, true, record);
+
+                    // 2. 如果成功获取到总结文本
+                    if (summaryText) {
+                        // 3. 弹出最终的确认框，让用户预览并决定是否保存
+                        const userConfirmedSave = await showCustomConfirm(
+                            '预览总结结果',
+                            `<p style="text-align: left; font-weight: bold; margin-bottom: 10px;">AI已将本次通话总结为以下记忆，是否要存入角色的长期记忆中？</p>
+                             <blockquote style="background: #f0f0f0; border-left: 3px solid #ccc; padding: 10px; margin: 0; text-align: left; white-space: pre-wrap;">${summaryText}</blockquote>`,
+                            { confirmText: '存入记忆', cancelText: '放弃' }
+                        );
+
+                        // 4. 只有当用户点击“存入记忆”时，才执行真正的保存操作
+                        if (userConfirmedSave) {
+                            // (这里的保存逻辑与 summarizeCallTranscript 内部的逻辑一致)
+                            let targetMemoryChat = chat;
+                            if (chat.isGroup) {
+                                let protagonist = chat.members.find(m => m.originalName === videoCallState.callRequester) || chat.members.find(m => m.id !== 'user' && videoCallState.participants.some(p => p.id === m.id)) || chat.members[0];
+                                targetMemoryChat = state.chats[protagonist.id];
+                            }
+
+                            const newMemoryEntry = {
+                                content: summaryText,
+                                timestamp: Date.now(),
+                                source: chat.isGroup ? 'group_call_summary' : 'call_summary'
+                            };
+                            if (!targetMemoryChat.longTermMemory) targetMemoryChat.longTermMemory = [];
+                            targetMemoryChat.longTermMemory.push(newMemoryEntry);
+                            await db.chats.put(targetMemoryChat);
+                            
+                            await showCustomAlert("保存成功", `新的记忆已成功存入角色“${targetMemoryChat.name}”的档案中！`);
+                        } else {
+                            await showCustomAlert("操作取消", "总结已被放弃，记忆未作更改。");
+                        }
+                    }
+
+                } catch (error) {
+                    await showCustomAlert("总结失败", `操作失败，未能生成长期记忆。\n\n错误详情: ${error.message}`);
+                }
+            });
+            // ▲▲▲ 核心修改到这里结束 ▲▲▲
+
+            const closeBtn = document.getElementById('close-call-transcript-btn');
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', () => {
+                modal.classList.remove('visible');
+            });
+
+            modal.classList.add('visible');
         }
-    });
-
-    // ▼▼▼ 核心修改从这里开始 ▼▼▼
-    newSummarizeBtn.addEventListener('click', async () => {
-        modal.classList.remove('visible');
-        const chat = state.chats[record.chatId];
-        if (!chat) {
-            alert('错误：找不到该通话记录所属的聊天对象。');
-            return;
-        }
-
-        await showCustomAlert("请稍候...", "正在请求AI进行手动总结...");
-        
-        // 使用 try...catch 来“接住”可能抛出的错误
-        try {
-            const transcriptText = record.transcript.map(h => {
-                const sender = h.role === 'user' ? (chat.settings.myNickname || '我') : (h.senderName || chat.name);
-                return `${sender}: ${h.content}`;
-            }).join('\n');
-
-            // 调用我们升级后的总结函数
-            await summarizeCallTranscript(record.chatId, transcriptText);
-
-            // 只有在 try 块内没有出错时，才会执行这行，弹出成功提示
-            await showCustomAlert("总结成功", `手动总结已完成！新的记忆已添加到“${chat.name}”的长期记忆中。`);
-
-        } catch (error) {
-            // 如果 summarizeCallTranscript 抛出了错误，代码会立即跳转到这里
-            // 我们就可以在这里弹出清晰的失败提示框
-            await showCustomAlert("总结失败", `操作失败，未能生成长期记忆。\n\n错误详情: ${error.message}`);
-        }
-    });
-    // ▲▲▲ 核心修改到这里结束 ▲▲▲
-// ▼▼▼ 【这是您需要添加的核心修复代码】 ▼▼▼
-
-// 3. 为“关闭”按钮也创建克隆并绑定事件，确保它总是可用
-const closeBtn = document.getElementById('close-transcript-modal-btn');
-const newCloseBtn = closeBtn.cloneNode(true);
-closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-newCloseBtn.addEventListener('click', () => {
-    modal.classList.remove('visible');
-});
-
-// ▲▲▲ 新增代码粘贴结束 ▲▲▲
-    modal.classList.add('visible');
-}
         
         // ▲▲▲ 新函数粘贴结束 ▲▲▲
         
@@ -36613,69 +36969,78 @@ audioPlayer.addEventListener('play', () => {
                     const chatInput = document.getElementById('chat-input');
                     // ▼▼▼ 找到 id="send-btn" 的 click 事件监听器 ▼▼▼
 // 【最终性能优化版】
-document.getElementById('send-btn').addEventListener('click', () => { // 注意：移除了 async
-    const content = chatInput.value.trim();
-    if (!content || !state.activeChatId) return;
+        document.getElementById('send-btn').addEventListener('click', () => { // 注意：移除了 async
+            const content = chatInput.value.trim();
+            if (!content || !state.activeChatId) return;
 
-    const chat = state.chats[state.activeChatId];
-    const msg = {
-        role: 'user',
-        content,
-        timestamp: Date.now()
-    };
+            const chat = state.chats[state.activeChatId];
+            const msg = {
+                role: 'user',
+                content,
+                timestamp: Date.now()
+            };
 
-    if (currentReplyContext) {
-        msg.quote = currentReplyContext;
-    }
-
-    // 【优化1：先渲染，后保存】立即将消息显示在屏幕上，给用户即时反馈！
-    appendMessage(msg, chat);
-
-    // 【优化2：异步处理耗时操作】将数据存储和列表更新放到后台，不阻塞用户界面
-    (async () => {
-        chat.history.push(msg);
-        await db.chats.put(chat); // 保存到数据库
-        updateChatListItem(chat.id); // 【优化3】使用“精准更新”替换“全局刷新”
-/**
- * 【全新】精准更新单个聊天项的预览和位置，而不是刷新整个列表
- * @param {string} chatId - 需要更新的聊天ID
- */
-function updateChatListItem(chatId) {
-    const chat = state.chats[chatId];
-    if (!chat) return;
-
-    const chatListEl = document.getElementById('chat-list');
-    const existingItem = chatListEl.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
-    
-    // 1. 创建一个新的、包含最新信息的列表项
-    const newItem = createChatListItem(chat);
-
-    // 2. 如果旧的列表项存在，就用新的替换它
-    if (existingItem) {
-        const parent = existingItem.parentNode;
-        parent.replaceChild(newItem, existingItem);
-
-        // 3. 如果这个聊天没有被置顶，就把它移动到最前面（非置顶区域的顶部）
-        if (!chat.isPinned) {
-            const firstUnpinned = chatListEl.querySelector('.chat-list-item:not(.pinned)');
-            if (firstUnpinned && firstUnpinned !== newItem) {
-                chatListEl.insertBefore(newItem, firstUnpinned);
+            if (currentReplyContext) {
+                msg.quote = currentReplyContext;
             }
-        }
-    } else {
-        // 如果列表里之前没有这一项，就直接添加到顶部
-        chatListEl.prepend(newItem);
-    }
-}
-    })();
 
-    // 清理工作（这部分很快，可以立即执行）
-    chatInput.value = '';
-    chatInput.style.height = 'auto';
-    chatInput.focus();
-    cancelReplyMode();
-});
-                    document.getElementById('wait-reply-btn').addEventListener('click', triggerAiResponse);
+            // 【优化1：先渲染，后保存】立即将消息显示在屏幕上，给用户即时反馈！
+            appendMessage(msg, chat);
+
+            // 【优化2：异步处理耗时操作】将数据存储和列表更新放到后台，不阻塞用户界面
+            (async () => {
+                chat.history.push(msg);
+                await db.chats.put(chat); // 保存到数据库
+                updateChatListItem(chat.id); // <<<<< 使用你提供的代码里的精准更新函数
+            })();
+
+            // 清理工作（这部分很快，可以立即执行）
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            chatInput.focus();
+            cancelReplyMode();
+        });
+                    // ▼▼▼ 【最终修复版 | 支持即时UI反馈】请用这段新代码替换旧的 wait-reply-btn 监听器 ▼▼▼
+        document.getElementById('wait-reply-btn').addEventListener('click', () => {
+            // 1. 安全检查，确保在聊天中
+            if (!state.activeChatId) return;
+            const chat = state.chats[state.activeChatId];
+            if (!chat) return;
+        
+            // --- 【【【核心修复就在这里！】】】 ---
+        
+            // 2. 立即更新UI，显示“正在输入...”状态
+            setAvatarActingState(chat.id, true); // 触发头像呼吸灯
+            
+            const chatHeaderTitle = document.getElementById('chat-header-title');
+        
+            if (chat.isGroup) {
+                // 如果是群聊，显示群聊的“正在输入”提示
+                if (chatHeaderTitle) {
+                    chatHeaderTitle.style.opacity = 0;
+                    setTimeout(() => {
+                        chatHeaderTitle.textContent = '成员们正在输入...';
+                        chatHeaderTitle.classList.add('typing-status');
+                        chatHeaderTitle.style.opacity = 1;
+                    }, 200);
+                }
+            } else {
+                // 如果是单聊，修改顶部标题
+                if (chatHeaderTitle) {
+                    chatHeaderTitle.style.opacity = 0;
+                    setTimeout(() => {
+                        chatHeaderTitle.textContent = '对方正在输入...';
+                        chatHeaderTitle.classList.add('typing-status');
+                        chatHeaderTitle.style.opacity = 1;
+                    }, 200);
+                }
+            }
+            // --- 【【【修复结束】】】 ---
+        
+            // 3. 最后，再调用后台的AI响应函数
+            triggerAiResponse();
+        });
+        // ▲▲▲ 替换结束 ▲▲▲
                     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('send-btn').click(); } });
                     //chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = (chatInput.scrollHeight) + 'px'; });
         
@@ -38680,7 +39045,28 @@ document.getElementById('chat-settings-screen').addEventListener('click', (e) =>
         document.getElementById('edit-message-btn').addEventListener('click', openAdvancedMessageEditor);
         // ▲▲▲ 替换结束 ▲▲▲
         document.getElementById('copy-message-btn').addEventListener('click', copyMessageContent);
-        
+                // ▼▼▼ 【全新】这是为“复制时间戳”按钮添加的核心功能 ▼▼▼
+        document.getElementById('copy-timestamp-btn').addEventListener('click', async () => {
+            // 1. 安全检查，确保有一个被长按的消息
+            if (!activeMessageTimestamp) return;
+
+            // 2. 将数字时间戳直接转换为字符串
+            const textToCopy = String(activeMessageTimestamp);
+
+            try {
+                // 3. 使用剪贴板API进行复制
+                await navigator.clipboard.writeText(textToCopy);
+                // 4. 给出成功提示
+                await showCustomAlert('复制成功', `时间戳 ${textToCopy} 已复制到剪贴板。`);
+            } catch (err) {
+                // 5. 处理复制失败的情况
+                await showCustomAlert('复制失败', '无法访问剪贴板，请检查浏览器权限。');
+            }
+            
+            // 6. 无论成功与否，最后都关闭操作菜单
+            hideMessageActions();
+        });
+        // ▲▲▲ 新增代码结束 ▲▲▲
         // ▼▼▼ 在这里添加新代码 ▼▼▼
         document.getElementById('recall-message-btn').addEventListener('click', handleRecallClick);
         // ▲▲▲ 添加结束 ▲▲▲
@@ -39770,20 +40156,30 @@ if (placeholder) {
         // 长期记忆页面顶部“总结”按钮 -> 手动总结
         document.getElementById('summarize-recent-btn-header').addEventListener('click', handleManualSummary);
         
-        // 【【【核心修复就在这里！】】】
-document.getElementById('memory-list-container').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('.edit-memory-btn');
-    if (editBtn) {
-        handleEditMemory(editBtn.dataset.authorId, parseInt(editBtn.dataset.memoryTimestamp));
-        return;
-    }
-    const deleteBtn = e.target.closest('.delete-memory-btn');
-    if (deleteBtn) {
-        handleDeleteMemory(deleteBtn.dataset.authorId, parseInt(deleteBtn.dataset.memoryTimestamp));
-        return;
-    }
-});
-        // ▲▲▲ 替换结束 ▲▲▲
+ document.getElementById('memory-list-container').addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-memory-btn');
+            if (editBtn) {
+                handleEditMemory(editBtn.dataset.authorId, parseInt(editBtn.dataset.memoryTimestamp));
+                return;
+            }
+        
+            const deleteBtn = e.target.closest('.delete-memory-btn');
+            if (deleteBtn) {
+                // 删除按钮现在总是触发永久删除
+                handleDeleteMemory(deleteBtn.dataset.authorId, parseInt(deleteBtn.dataset.memoryTimestamp));
+                return;
+            }
+        
+            // 【【【核心新增：处理新的“隐藏/恢复”按钮】】】
+            const visibilityBtn = e.target.closest('.toggle-visibility-btn');
+            if (visibilityBtn) {
+                // 如果点击的是眼睛图标，就调用我们新的切换可见性函数
+                toggleMemoryVisibilityInGroup(visibilityBtn.dataset.authorId, parseInt(visibilityBtn.dataset.memoryTimestamp));
+                return;
+            }
+        });
+
+
         // ▼▼▼ 【全新】五子棋功能事件监听器 ▼▼▼
         document.getElementById('gomoku-btn').addEventListener('click', toggleGomokuBoard);
         document.getElementById('close-gomoku-btn').addEventListener('click', closeGomokuBoard);

@@ -26,7 +26,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 	<script src="https://phoebeboo.github.io/mewoooo/pp.js" defer></script>
 	<!-- ▼▼▼ 【核心新增】请将这两行代码粘贴到 <head> 的末尾 ▼▼▼ -->
 <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
@@ -12111,6 +12110,8 @@
 		let replyToCommentContext = null; // 用于暂存回复的评论信息
 		// ▲▲▲ 新增变量结束 ▲▲▲
 
+        let isRenderingInterface = false; // 聊天界面的渲染锁，默认为 false (未锁定)
+
         // ... 其他全局变量
         let activeMessageTimestamp = null;
         let activeTransferTimestamp = null; // <-- 确保这行在这里，并且只有一行
@@ -15663,12 +15664,39 @@ async function renderChatList() {
     return wrapper;
         }
         // ▲▲▲ 替换结束 ▲▲▲
-        
-        // ▼▼▼ 【最终修复版】请用这个全新的、更健壮的函数，完整替换旧的 renderChatInterface 函数 ▼▼▼
-        async function renderChatInterface(chatId) { // <--- 关键修改1：将函数声明为 async
-            cleanupWaimaiTimers();
-            const chat = state.chats[chatId];
-            if (!chat) return;
+
+
+
+
+
+		
+
+ /**
+         * 【V4.1 | 终极防冲突稳定版】
+         * 融合所有优化策略，使用更强的渲染锁和更稳健的分步渲染。
+         * @param {string} chatId - 要渲染的聊天ID
+         */
+        async function renderChatInterface(chatId) {
+            // 1. 【增强版渲染锁】
+            if (isRenderingInterface) {
+                console.warn(`渲染被锁定！ renderChatInterface(${chatId}) 请求被忽略。`);
+                return;
+            }
+            isRenderingInterface = true;
+            
+            // 获取容器，后续会多次用到
+            const messagesContainer = document.getElementById('chat-messages');
+            // 在开始渲染前，先彻底清空旧内容，并移除可能存在的“加载更多”按钮
+            messagesContainer.innerHTML = '';
+            
+            try {
+                // 2. 【功能逻辑】(所有前置代码保持不变)
+                cleanupWaimaiTimers();
+                const chat = state.chats[state.activeChatId]; //【【【核心修复】】】从 state.activeChatId 获取正确的 chat 对象
+                if (!chat || chat.id !== chatId) { // 增加一道保险，确保我们渲染的是正确的聊天
+                     isRenderingInterface = false; // 【安全解锁】
+                     return;
+                }
         
             
             exitSelectionMode();
@@ -15776,40 +15804,53 @@ async function renderChatList() {
     }
     // ▲▲▲ 逻辑结束 ▲▲▲
 
-    messagesContainer.innerHTML = '';
-    
-    const history = chat.history;
-    const totalMessages = history.length;
-    currentRenderedCount = 0;
-    const initialMessages = history.slice(-MESSAGE_RENDER_WINDOW);
-    
-    let lastTimestamp = 0;
-    const fragment = document.createDocumentFragment();
+        // 3. 【【【最终版渲染核心】】】
+                const history = chat.history;
+                const totalMessages = history.length;
+                currentRenderedCount = 0;
 
-    for (const msg of initialMessages) {
-        if (lastTimestamp > 0 && (msg.timestamp - lastTimestamp > 3600000)) {
-            fragment.appendChild(createSystemTimestampElement(msg.timestamp));
-        }
-        const messageEl = await createMessageElement(msg, chat, true);
-        if (messageEl) {
-            fragment.appendChild(messageEl);
-        }
-        lastTimestamp = msg.timestamp;
-    }
-    messagesContainer.appendChild(fragment);
+                const LATEST_CHUNK_SIZE = 20; // 初始加载数量
+                const latestMessages = history.slice(-LATEST_CHUNK_SIZE);
 
-    currentRenderedCount = initialMessages.length;
-    if (totalMessages > currentRenderedCount) {
-        prependLoadMoreButton(messagesContainer);
-    }
-    
-    /*const typingIndicator = document.createElement('div');
-    typingIndicator.id = 'typing-indicator';
-    typingIndicator.style.display = 'none';
-    typingIndicator.textContent = '对方正在输入...';
-    messagesContainer.appendChild(typingIndicator);*/
-    
-    setTimeout(() => messagesContainer.scrollTop = messagesContainer.scrollHeight, 0);
+                // a. 【并行创建】DOM元素 (保持高性能)
+                const elementCreationPromises = latestMessages.map(async (msg, index) => {
+                    const elements = [];
+                    const prevMsg = index > 0 ? latestMessages[index - 1] : history[history.length - LATEST_CHUNK_SIZE - 1];
+                    if (prevMsg && (msg.timestamp - prevMsg.timestamp > 3600000)) {
+                        elements.push(createSystemTimestampElement(msg.timestamp));
+                    }
+                    const messageEl = await createMessageElement(msg, chat, true);
+                    if (messageEl) {
+                        elements.push(messageEl);
+                    }
+                    return elements;
+                });
+                
+                const elementGroups = await Promise.all(elementCreationPromises);
+                
+                // b. 【一次性同步渲染】所有消息 (保持原子化)
+                const fragment = document.createDocumentFragment();
+                elementGroups.flat().forEach(el => fragment.appendChild(el));
+                messagesContainer.appendChild(fragment);
+                
+                currentRenderedCount = latestMessages.length;
+
+                // c. 【【【核心修复】】】
+                // 我们不再使用 setTimeout，而是在所有消息都渲染完毕后，
+                // 立刻、同步地检查是否需要添加“加载更多”按钮。
+                if (totalMessages > currentRenderedCount) {
+                    prependLoadMoreButton(messagesContainer);
+                }
+                
+                // d. 立即滚动到底部 (逻辑不变)
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            } catch (error) {
+                console.error("在 renderChatInterface 执行期间发生严重错误:", error);
+            } finally {
+                // 4. 【解锁】(保持不变)
+                isRenderingInterface = false;
+            }
 }
 // ▲▲▲ 替换结束 ▲▲▲
         
@@ -26890,20 +26931,42 @@ function updateMusicProgressBar() {
         // ▲▲▲ 新函数粘贴结束 ▲▲▲
         // ▼▼▼ 【最终修复版本】请用这个全新的函数，完整替换旧的 handleLongScreenshot ▼▼▼
         
-        /**
-         * 【V3.0 | 布局修复版】处理长截图功能
+/**
+         * 【V4.0 | 动态加载隔离版】处理长截图功能
+         * 通过在使用时才加载 html2canvas 库，彻底隔离其可能带来的副作用。
          */
         async function handleLongScreenshot() {
             if (selectedMessages.size === 0) return;
             const chat = state.chats[state.activeChatId];
             if (!chat) return;
-        
-            // 0. 显示“生成中”状态
+
             const screenshotBtn = document.getElementById('selection-screenshot-btn');
             const originalBtnText = screenshotBtn.textContent;
-            screenshotBtn.textContent = '生成中...';
+            screenshotBtn.textContent = '加载组件...';
             screenshotBtn.disabled = true;
-        
+            
+            // --- 1. 【【【核心修改：动态加载脚本】】】 ---
+            try {
+                // 检查 html2canvas 是否已加载
+                if (typeof html2canvas === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+            } catch (error) {
+                console.error("加载 html2canvas 失败:", error);
+                await showCustomAlert("错误", "无法加载截图组件，请检查网络连接。");
+                screenshotBtn.textContent = originalBtnText;
+                screenshotBtn.disabled = false;
+                return;
+            }
+            // --- 加载结束 ---
+
+            screenshotBtn.textContent = '生成中...';        
             // 1. 创建临时的截图容器和样式（这部分不变）
             const screenshotContainer = document.createElement('div');
             const phoneScreen = document.getElementById('phone-screen');
@@ -34433,90 +34496,125 @@ function clearSearchFilters() {
 
 // ▲▲▲ JS代码粘贴结束 ▲▲▲
 
-// ▼▼▼ 【全新】这是为聊天列表滑动功能添加的【全部JS逻辑】，请粘贴到 init() 前面 ▼▼▼
-let chatSwipeState = { isDragging: false, startX: 0, startY: 0, activeWrapper: null, isClick: true };
+// ▼▼▼ 【V2.0 | 防误触终极版】请用这整块代码替换所有旧的滑动处理函数 ▼▼▼
 
-/**
- * 关闭所有已打开的滑动项
- * @param {HTMLElement} exceptThisOne - (可选) 保持这个元素打开
- */
-function resetAllChatSwipes(exceptThisOne = null) {
-    document.querySelectorAll('.chat-item-wrapper').forEach(wrapper => {
-        if (wrapper !== exceptThisOne) {
-            wrapper.querySelector('.chat-list-item').classList.remove('swiped');
+        let chatSwipeState = { 
+            isDragging: false, 
+            startX: 0, 
+            startY: 0, 
+            activeWrapper: null,
+            // 【核心新增】用 swipeDirection 来判断用户的真实意图
+            swipeDirection: null, // null: 未确定, 'horizontal': 水平, 'vertical': 垂直
+            isClick: true 
+        };
+
+        /**
+         * 关闭所有已打开的滑动项
+         */
+        function resetAllChatSwipes(exceptThisOne = null) {
+            document.querySelectorAll('.chat-item-wrapper').forEach(wrapper => {
+                if (wrapper !== exceptThisOne) {
+                    wrapper.querySelector('.chat-list-item').classList.remove('swiped');
+                }
+            });
         }
-    });
-}
 
-/**
- * 处理滑动开始事件
- */
-const handleChatSwipeStart = (e) => {
-    const targetWrapper = e.target.closest('.chat-item-wrapper');
-    if (!targetWrapper) return;
+        /**
+         * 处理滑动开始事件 (逻辑不变)
+         */
+        const handleChatSwipeStart = (e) => {
+            const targetWrapper = e.target.closest('.chat-item-wrapper');
+            if (!targetWrapper) return;
 
-    resetAllChatSwipes(targetWrapper);
-    chatSwipeState.activeWrapper = targetWrapper;
-    chatSwipeState.isDragging = true;
-    chatSwipeState.isClick = true;
-    chatSwipeState.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-    chatSwipeState.startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
-    chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transition = 'none';
-};
+            resetAllChatSwipes(targetWrapper);
+            chatSwipeState.activeWrapper = targetWrapper;
+            chatSwipeState.isDragging = true;
+            chatSwipeState.isClick = true;
+            chatSwipeState.swipeDirection = null; // 重置意图
+            chatSwipeState.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            chatSwipeState.startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transition = 'none';
+        };
 
-/**
- * 处理滑动过程事件
- */
-const handleChatSwipeMove = (e) => {
-    if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
+        /**
+         * 【全新 | 智能意图检测版】处理滑动过程事件
+         */
+        const handleChatSwipeMove = (e) => {
+            if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
 
-    const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
-    const diffX = currentX - chatSwipeState.startX;
+            const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            const currentY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            const diffX = currentX - chatSwipeState.startX;
+            const diffY = currentY - chatSwipeState.startY;
 
-    if (chatSwipeState.isClick && Math.abs(diffX) > 5) {
-        chatSwipeState.isClick = false;
-    }
-    
-    if (diffX < 0) { // 只允许向左滑动
-        e.preventDefault();
-        const translation = Math.max(-160, diffX); // 最大滑动距离160px
-        chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transform = `translateX(${translation}px)`;
-    }
-};
+            // 如果手指移动超过了一个很小的阈值（比如5像素），就认为不是纯粹的点击了
+            if (chatSwipeState.isClick && (Math.abs(diffX) > 5 || Math.abs(diffY) > 5)) {
+                chatSwipeState.isClick = false;
+            }
+            
+            // 【【【核心逻辑：判断滑动意图】】】
+            // 只有在 swipeDirection 未确定时，我们才进行判断
+            if (!chatSwipeState.swipeDirection) {
+                // 如果水平方向的移动距离，明显大于垂直方向，就认为是“横向滑动”
+                if (Math.abs(diffX) > Math.abs(diffY) + 3) { // +3 是为了增加判断的容错性
+                    chatSwipeState.swipeDirection = 'horizontal';
+                } 
+                // 否则，就认为是“纵向滚动”
+                else {
+                    chatSwipeState.swipeDirection = 'vertical';
+                }
+            }
 
-/**
- * 处理滑动结束事件
- */
-const handleChatSwipeEnd = (e) => {
-    if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
-    
-    const postItem = chatSwipeState.activeWrapper.querySelector('.chat-list-item');
-    postItem.style.transition = 'transform 0.3s ease';
+            // 只有当用户的意图是“横向滑动”时，我们才执行左滑的动画
+            if (chatSwipeState.swipeDirection === 'horizontal') {
+                e.preventDefault(); // 阻止页面上下滚动
+                // 只允许向左滑动
+                if (diffX < 0) {
+                    const translation = Math.max(-160, diffX);
+                    chatSwipeState.activeWrapper.querySelector('.chat-list-item').style.transform = `translateX(${translation}px)`;
+                }
+            }
+            // 如果用户的意图是“纵向滚动”，我们这里什么都不做，让浏览器自己处理页面的上下滚动即可。
+        };
 
-    if (!chatSwipeState.isClick) {
-        const finalX = e.type.includes('touchend') ? e.changedTouches[0].pageX : e.pageX;
-        const diffX = finalX - chatSwipeState.startX;
-        if (diffX < -60) { // 滑动超过60像素就自动展开
-            postItem.classList.add('swiped');
-        } else {
-            postItem.classList.remove('swiped');
-        }
-    }
-    
-    postItem.style.transform = ''; // 清除内联样式，让CSS class接管
+        /**
+         * 【全新 | 智能意图检测版】处理滑动结束事件
+         */
+        const handleChatSwipeEnd = (e) => {
+            if (!chatSwipeState.isDragging || !chatSwipeState.activeWrapper) return;
+            
+            const postItem = chatSwipeState.activeWrapper.querySelector('.chat-list-item');
+            postItem.style.transition = 'transform 0.3s ease';
 
-    // 【【【核心修复就在这里！】】】
-    // 只有当它是一个纯粹的点击，并且点击的目标不是操作按钮时，才打开聊天
-    if (chatSwipeState.isClick && !e.target.closest('.chat-item-actions .action-button')) {
-        openChat(chatSwipeState.activeWrapper.dataset.chatId);
-    }
-    // 【【【修复结束】】】
+            // 【【【核心逻辑：根据最终意图决定行为】】】
+            
+            // 1. 如果最终被判定为一次纯粹的“点击”
+            if (chatSwipeState.isClick) {
+                // 并且点击的不是操作按钮区域
+                if (!e.target.closest('.chat-item-actions .action-button')) {
+                    // 才执行进入聊天的操作
+                    openChat(chatSwipeState.activeWrapper.dataset.chatId);
+                }
+            }
+            // 2. 如果被判定为一次“横向滑动”
+            else if (chatSwipeState.swipeDirection === 'horizontal') {
+                const finalX = e.type.includes('touchend') ? e.changedTouches[0].pageX : e.pageX;
+                const diffX = finalX - chatSwipeState.startX;
+                // 根据滑动的距离，决定是展开操作栏还是弹回去
+                if (diffX < -60) {
+                    postItem.classList.add('swiped');
+                } else {
+                    postItem.classList.remove('swiped');
+                }
+            }
+            // 3. 如果被判定为“纵向滚动”，我们在这里什么都不用做。
 
-    chatSwipeState.isDragging = false;
-    chatSwipeState.activeWrapper = null;
-};
-// ▲▲▲ 新增JS代码结束 ▲▲▲
-
+            // 恢复样式和重置状态 (逻辑不变)
+            postItem.style.transform = '';
+            chatSwipeState.isDragging = false;
+            chatSwipeState.activeWrapper = null;
+        };
+        // ▲▲▲ 替换结束 ▲▲▲
 /**
  * 初始化默认的小组，包括“梦角小组”等特色小组
  */

@@ -34572,6 +34572,9 @@ async function handleConfirmDataClear(typesToClear) {
 
 // ▲▲▲ JS代码替换结束 ▲▲▲
 
+
+
+
 // ▼▼▼ 【全新】这是“搜索聊天记录”功能的【全部核心JS代码】，请完整粘贴到 init() 函数的前面 ▼▼▼
 
 /**

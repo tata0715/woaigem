@@ -34401,8 +34401,11 @@ function renderClearWizardStep2() {
         { id: 'thoughts', name: '心声', description: '将清空选定角色的心声和散记历史。' },
         { id: 'memories', name: '长期记忆', description: '将清空选定角色的所有长期记忆。' },
         { id: 'cphone', name: 'Cphone数据 (CPhone)', description: '将清空角色的相册、QQ、浏览器、淘宝、日记、备忘录等所有模拟手机数据。' },
-        // ▼▼▼ 【核心新增】在这里添加我们全新的清理选项 ▼▼▼
-        { id: 'tts_cache', name: 'TTS语音缓存', description: '清空所有已生成的语音文件缓存，下次播放时会重新生成。这可以释放大量存储空间。' }
+		{ 
+            id: 'orphan_voice', 
+            name: '孤儿语音数据 (推荐)', 
+            description: '清理所有原始消息已被删除的语音缓存和收藏。此选项【无需】选择角色，将对整个应用生效。' 
+        }
         // ▲▲▲ 新增结束 ▲▲▲
     ];
 
@@ -34494,21 +34497,48 @@ async function handleClearSelectedCharsTtsCache() {
 }
 
 
+// ▼▼▼ 【请用这个 V2.0 版本】完整替换旧的 handleConfirmDataClear 函数 ▼▼▼
+
 /**
- * 【已更新】处理通用的数据清理逻辑（现在不再处理TTS）
- * @param {Array<string>} typesToClear - 要清理的数据类型数组
+ * 【V2.0 | 已集成孤儿数据清理】处理最终的确认清理操作
  */
-async function handleConfirmDataClear(typesToClear) {
-    const confirmMessage = `此操作将永久删除您为【已选定角色】选择的所有数据，且无法恢复！<br><br><strong>确定要继续吗？</strong>`;
+async function handleConfirmDataClear() {
+    const selectedItems = document.querySelectorAll('#data-clear-type-list .clear-posts-item.selected');
+    if (selectedItems.length === 0) {
+        alert("请至少选择一种要清理的数据类型。");
+        return;
+    }
+
+    const typesToClear = Array.from(selectedItems).map(item => item.dataset.typeId);
+
+    // --- 1. 构建动态的确认信息 ---
+    let confirmMessage = `此操作将永久删除您选择的数据，且无法恢复！<br><br>`;
+    if (typesToClear.includes('orphan_voice')) {
+        confirmMessage += `<strong style="color:#ffc107;">- 所有孤儿语音数据</strong><br>`;
+    }
+    const charSpecificTypes = typesToClear.filter(t => t !== 'orphan_voice');
+    if (charSpecificTypes.length > 0) {
+        confirmMessage += `<strong>- 已选角色的:</strong> ${charSpecificTypes.join('、 ')}<br>`;
+    }
+    confirmMessage += `<br>确定要继续吗？`;
+
     const confirmed = await showCustomConfirm('最后确认！', confirmMessage, { confirmButtonClass: 'btn-danger', confirmText: '确认删除' });
     if (!confirmed) return;
 
     await showCustomAlert("请稍候...", "正在执行清理操作...");
 
     try {
+        let orphanCleanupResult = null;
+
+        // --- 2. 【核心修改】在这里分流处理 ---
+        if (typesToClear.includes('orphan_voice')) {
+            // 如果用户选择了清理孤儿语音，就调用新函数
+            orphanCleanupResult = await cleanupOrphanedVoiceData();
+        }
+		
         await db.transaction('rw', db.tables, async () => {
             // 【核心修改】这里的循环现在只处理非TTS的类型
-            const charSpecificTypes = typesToClear.filter(t => t !== 'tts_cache');
+            
             if (charSpecificTypes.length > 0) {
                 for (const charId of selectedCharsForClear) {
                     for (const type of charSpecificTypes) {
@@ -34557,12 +34587,14 @@ async function handleConfirmDataClear(typesToClear) {
         
         await loadAllDataFromDB();
         await renderChatList();
-        if(document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId){
-            renderChatInterface(state.activeChatId);
-        }
         
         document.getElementById('data-clear-wizard-modal').classList.remove('visible');
-        await showCustomAlert("清理完成", "指定的数据已成功清除。");
+                let successMessage = "指定的常规数据已成功清除。";
+        if(orphanCleanupResult) {
+            successMessage += `\n\n此外，还清理了 ${orphanCleanupResult.clearedCache} 条孤儿语音缓存和 ${orphanCleanupResult.clearedFavorites} 条孤儿收藏记录。`;
+        }
+        await showCustomAlert("清理完成", successMessage);
+
 
     } catch (error) {
         console.error("高级数据清理失败:", error);
@@ -34572,7 +34604,83 @@ async function handleConfirmDataClear(typesToClear) {
 
 // ▲▲▲ JS代码替换结束 ▲▲▲
 
+// ▼▼▼ 【全新 | 垃圾回收核心】请将这个全新的函数，完整粘贴到您的JS功能区 ▼▼▼
 
+// ▼▼▼ 【最终修复版】请用这个全新的函数，完整替换旧的 cleanupOrphanedVoiceData ▼▼▼
+
+/**
+ * 【核心】清理所有与任何现有消息或收藏都无关的“孤儿”语音缓存和收藏记录
+ * @returns {Promise<{clearedCache: number, clearedFavorites: number}>} 返回清理的数量
+ */
+async function cleanupOrphanedVoiceData() {
+    console.log("开始执行孤儿语音数据垃圾回收...");
+    let clearedCounts = { clearedCache: 0, clearedFavorites: 0 };
+
+    try {
+        await db.transaction('rw', db.chats, db.ttsCache, db.voiceFavorites, async () => {
+            // 1. 建立一个“白名单”，包含所有当前“合法”的 cacheKey
+            const validCacheKeys = new Set();
+            
+            const allChats = await db.chats.toArray();
+            allChats.forEach(chat => {
+                const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+                chat.history.forEach(msg => {
+                    if (msg.type === 'voice_message' && msg.role === 'assistant' && msg.content) {
+                        validCacheKeys.add(`tts_${voiceId}_${msg.content}`);
+                    }
+                });
+            });
+
+            const allFavorites = await db.voiceFavorites.toArray();
+            allFavorites.forEach(fav => {
+                validCacheKeys.add(fav.cacheKey);
+            });
+            
+            console.log(`白名单建立完毕，共找到 ${validCacheKeys.size} 个合法的语音钥匙。`);
+
+            // 2. 清理 ttsCache 表
+            const allCache = await db.ttsCache.toArray();
+            const cacheToDelete = [];
+            allCache.forEach(cacheItem => {
+                if (!validCacheKeys.has(cacheItem.cacheKey)) {
+                    cacheToDelete.push(cacheItem.id); 
+                }
+            });
+            
+            // 【【【核心修复就在这里！】】】
+            if (cacheToDelete.length > 0) {
+                // 先记录要删除的数量
+                clearedCounts.clearedCache = cacheToDelete.length;
+                // 然后再执行删除操作
+                await db.ttsCache.bulkDelete(cacheToDelete);
+                console.log(`成功清理了 ${clearedCounts.clearedCache} 条孤儿语音缓存。`);
+            }
+
+            // 3. 清理 voiceFavorites 表 (同样应用修复)
+            const favoritesToDelete = [];
+            allFavorites.forEach(fav => {
+                if (!validCacheKeys.has(fav.cacheKey)) {
+                    favoritesToDelete.push(fav.id);
+                }
+            });
+
+            // 【【【核心修复也在这里！】】】
+            if (favoritesToDelete.length > 0) {
+                // 先记录数量
+                clearedCounts.clearedFavorites = favoritesToDelete.length;
+                // 再执行删除
+                await db.voiceFavorites.bulkDelete(favoritesToDelete);
+                console.log(`成功清理了 ${clearedCounts.clearedFavorites} 条孤儿语音收藏。`);
+            }
+        });
+    } catch (error) {
+        console.error("孤儿数据清理失败:", error);
+        throw error;
+    }
+
+    return clearedCounts;
+}
+// ▲▲▲ 替换结束 ▲▲▲
 
 
 // ▼▼▼ 【全新】这是“搜索聊天记录”功能的【全部核心JS代码】，请完整粘贴到 init() 函数的前面 ▼▼▼

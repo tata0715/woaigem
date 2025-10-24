@@ -9471,6 +9471,128 @@
             display: none;
         }
         /* ▲▲▲ 新增CSS结束 ▲▲▲ */
+
+/* ▼▼▼ 【全新 | 最终修复版】语音管理窗口样式 ▼▼▼ */
+
+/* 1. 【核心】让弹窗主体变为 Flex 容器，这是固定底部的关键 */
+#voice-manager-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止内部元素溢出 */
+}
+
+/* 2. 【核心】让列表区域自动填满所有可用空间，并产生滚动条 */
+#voice-manager-modal .list-container {
+    flex-grow: 1; /* 占据所有剩余空间 */
+    overflow-y: auto; /* 内容超出时滚动 */
+    height: 100%; /* 确保在Flex容器中正确计算高度 */
+}
+
+/* 3. 美化列表项 */
+.voice-manager-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px; /* 增加上下内边距，让列表更舒展 */
+    border-bottom: 1px solid var(--border-color);
+}
+.voice-manager-item .item-text {
+    flex-grow: 1;
+    font-size: 14px;
+    line-height: 1.6; /* 增加行高，改善多行文本的可读性 */
+    /* 多行省略效果，确保文本不会溢出 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 最多显示3行 */
+    -webkit-box-orient: vertical;
+}
+.voice-manager-item .item-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+/* ▼▼▼ 【全新】语音管理按钮美化样式 ▼▼▼ */
+.voice-manager-item .item-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+    color: var(--text-secondary);
+}
+.voice-manager-item .item-action-btn:hover {
+    background-color: #e9ecef;
+    color: var(--text-primary);
+}
+#phone-screen.dark-mode .voice-manager-item .item-action-btn:hover {
+    background-color: #38383a;
+}
+.voice-manager-item .item-action-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* 默认（未收藏）的空心星星 */
+.voice-manager-item .item-action-btn.favorite-btn svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+}
+
+/* 激活（已收藏）和取消收藏按钮的实心星星 */
+.voice-manager-item .item-action-btn.favorite-btn.active,
+.voice-manager-item .item-action-btn.unfavorite-btn {
+    color: #ffc107; /* 黄色 */
+}
+.voice-manager-item .item-action-btn.favorite-btn.active svg,
+.voice-manager-item .item-action-btn.unfavorite-btn svg {
+    fill: currentColor; /* 用颜色填充 */
+    stroke: none; /* 移除描边 */
+}
+/* ▼▼▼ 【全新 | 终极修复版】语音管理窗口样式 ▼▼▼ */
+
+/* 1. 【核心】让弹窗主体变为 Flex 容器，这是固定底部的关键 */
+#voice-manager-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止内部元素溢出 */
+	height: auto; /* 核心1：让高度由内容决定 */
+    max-height: 60%; /* 核心2：设置一个最大高度，防止内容过多时撑破屏幕 */
+	
+    background-color: rgba(247, 247, 247, 0.85); /* 半透明背景 */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+#phone-screen.dark-mode #voice-manager-modal .modal-content {
+    background-color: rgba(44, 44, 46, 0.85); /* 夜间模式下的半透明背景 */
+}
+
+#voice-manager-modal .modal-header,
+#voice-manager-modal .modal-footer {
+    flex-shrink: 0; /* 禁止头部和脚部被压缩 */
+}
+
+/* 2. 【核心】让列表区域自动填满所有可用空间，并产生滚动条 */
+#voice-manager-modal .modal-body {
+    flex-grow: 1; /* 占据所有剩余空间 */
+    overflow-y: auto; /* 内容超出时滚动 */
+    height: 100%; /* 确保在Flex容器中正确计算高度 */
+    padding: 0; /* 移除body的内边距，让list-container撑满 */
+}
+
+#voice-manager-modal .list-container {
+    height: 100%; /* 让列表容器也撑满body */
+}
+
+
     </style>
 </head>
 <body>
@@ -10435,6 +10557,15 @@
                             <path d="M12 19v4"></path>
                             <path d="M8 23h8"></path>
                         </svg></button>
+<!-- ▼▼▼ 【全新】语音管理入口按钮 ▼▼▼ -->
+<button id="voice-manager-btn" class="chat-action-icon-btn action-button" title="语音管理">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+    </svg>
+</button>
+<!-- ▲▲▲ 新增HTML结束 ▲▲▲ -->
                     <button id="send-waimai-request-btn" class="chat-action-icon-btn action-button" title="发起外卖请求"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -13216,7 +13347,8 @@ function getRandomItem(arr) {
 			chapters: '++id, bookId, order',
 			chapterComments: '++id, chapterId',
 			mochaoSettings: '&id',
-    ttsCache: '++id, &cacheKey' // <-- 在这里添加新的一行
+			ttsCache: '++id, &cacheKey',
+			voiceFavorites: '++id, &cacheKey, chatId, timestamp' 
         }).upgrade(tx => {
             // 这个升级函数会自动处理数据迁移
             return tx.table('worldBooks').toCollection().modify(book => {
@@ -14647,7 +14779,8 @@ async function handleConfirmDeleteWorldBooks() {
                     // ▼▼▼ 在这里添加新代码 ▼▼▼
                     doubanPosts,
 					// ▼▼▼ 在这里添加对“圈子”数据表的读取 ▼▼▼
-					forumGroups, forumPosts, forumComments, forumCategories
+					forumGroups, forumPosts, forumComments, forumCategories,
+					voiceFavorites, ttsCache 
                 ] = await Promise.all([
                     db.chats.toArray(),
                     db.worldBooks.toArray(),
@@ -14672,7 +14805,10 @@ async function handleConfirmDeleteWorldBooks() {
                     db.doubanPosts.toArray(),
 					// ▼▼▼ 在这里添加对“圈子”数据表的读取 ▼▼▼
 					db.forumGroups.toArray(), db.forumPosts.toArray(), 
-					db.forumComments.toArray(), db.forumCategories.toArray()
+					db.forumComments.toArray(), db.forumCategories.toArray(),
+					// 【核心新增2】在这里添加对新表的读取
+					db.voiceFavorites.toArray(),
+					db.ttsCache.toArray()
 					// ▲▲▲ 添加结束 ▲▲▲
                 ]);
         
@@ -14686,7 +14822,9 @@ async function handleConfirmDeleteWorldBooks() {
                     // ▼▼▼ 在这里添加新代码 ▼▼▼
                     doubanPosts,
 					// ▼▼▼ 在这里添加“圈子”的数据 ▼▼▼
-					forumGroups, forumPosts, forumComments, forumCategories
+					forumGroups, forumPosts, forumComments, forumCategories,
+					// 【核心新增3】将读取到的数据也加入到备份对象中
+					voiceFavorites, ttsCache
 					// ▲▲▲ 添加结束 ▲▲▲
                 });
                 
@@ -14728,7 +14866,8 @@ async function handleConfirmDeleteWorldBooks() {
                     'memories', 'worldBookCategories', 'apiPresets', 'shoppingProducts', 
                     'callRecords', 'renderingRules', 'doubanPosts', 'forumGroups', 
                     'forumPosts', 'forumComments', 'forumCategories',
-                    'appearancePresets' // <-- 【核心新增】在这里添加外观预设表
+                    'appearancePresets',
+					'voiceFavorites', 'ttsCache' 
                 ];
 
                 const promises = tables.map(async (tableName) => {
@@ -14877,6 +15016,10 @@ async function handleConfirmDeleteWorldBooks() {
                     if (data.globalSettings) await db.globalSettings.put(data.globalSettings);
                     if (data.musicLibrary) await db.musicLibrary.put(data.musicLibrary);
                     if (data.qzoneSettings) await db.qzoneSettings.put(data.qzoneSettings);
+					// 【【【核心新增：在这里粘贴下面两行代码】】】
+                    if (Array.isArray(data.voiceFavorites)) await db.voiceFavorites.bulkPut(data.voiceFavorites);
+                    if (Array.isArray(data.ttsCache)) await db.ttsCache.bulkPut(data.ttsCache);
+                    // ▲▲▲ 新增结束 ▲▲▲
                 });
         
                 await showCustomAlert('导入成功', '所有数据已成功恢复！应用即将刷新以应用所有更改。');
@@ -15856,36 +15999,56 @@ async function renderChatList() {
         
                 function prependLoadMoreButton(container) { const button = document.createElement('button'); button.id = 'load-more-btn'; button.textContent = '加载更早的记录'; button.addEventListener('click', loadMoreMessages); container.prepend(button); }
         
-        // ▼▼▼ 【预防性修复】请用这个新版本替换旧的 loadMoreMessages 函数 ▼▼▼
-        async function loadMoreMessages() { // <--- 关键修改1：将函数声明为 async
-            const messagesContainer = document.getElementById('chat-messages');
-            const chat = state.chats[state.activeChatId];
-            if (!chat) return;
-        
-            const loadMoreBtn = document.getElementById('load-more-btn');
-            if (loadMoreBtn) loadMoreBtn.remove();
-            
-            const totalMessages = chat.history.length;
-            const nextSliceStart = totalMessages - currentRenderedCount - MESSAGE_RENDER_WINDOW;
-            const nextSliceEnd = totalMessages - currentRenderedCount;
-            const messagesToPrepend = chat.history.slice(Math.max(0, nextSliceStart), nextSliceEnd);
-            
-            const oldScrollHeight = messagesContainer.scrollHeight;
-            
-            // ▼▼▼ 关键修改2：将 forEach 替换为 for...of 循环 ▼▼▼
-            for (const msg of messagesToPrepend.reverse()) {
-                await prependMessage(msg, chat); // <-- 使用 await 等待
-            }
-            // ▲▲▲ 修改结束 ▲▲▲
-        
-            currentRenderedCount += messagesToPrepend.length;
-            const newScrollHeight = messagesContainer.scrollHeight;
-            messagesContainer.scrollTop += (newScrollHeight - oldScrollHeight);
-            
-            if (totalMessages > currentRenderedCount) {
-                prependLoadMoreButton(messagesContainer);
-            }
+/**
+ * 【V2.1 | 高性能 & 排序修复版】加载更多消息
+ */
+async function loadMoreMessages() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const chat = state.chats[state.activeChatId];
+    if (!chat) return;
+
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) loadMoreBtn.remove();
+    
+    const totalMessages = chat.history.length;
+    const nextSliceStart = totalMessages - currentRenderedCount - MESSAGE_RENDER_WINDOW;
+    const nextSliceEnd = totalMessages - currentRenderedCount;
+    const messagesToPrepend = chat.history.slice(Math.max(0, nextSliceStart), nextSliceEnd);
+    
+    const oldScrollHeight = messagesContainer.scrollHeight;
+    
+    const fragment = document.createDocumentFragment();
+
+    // ▼▼▼ 【【【核心修复就在这里！】】】 ▼▼▼
+    // 我们不再使用倒序循环 + appendChild，而是正序循环，逐个 prepends 到 fragment 中。
+    // 这能确保 fragment 内部的顺序是正确的。
+    for (const msg of messagesToPrepend) {
+        // (时间戳逻辑保持不变)
+        const prevMsgInSlice = chat.history[chat.history.indexOf(msg) - 1];
+        if (prevMsgInSlice && (msg.timestamp - prevMsgInSlice.timestamp > 3600000)) {
+            fragment.appendChild(createSystemTimestampElement(msg.timestamp));
         }
+        
+        const messageEl = await createMessageElement(msg, chat);
+        if (messageEl) {
+            fragment.appendChild(messageEl); // 按正确顺序添加到片段
+        }
+    }
+    // ▲▲▲ 修复结束 ▲▲▲
+
+    // 将包含所有新消息的、顺序正确的片段，一次性插入到DOM的最前面
+    messagesContainer.prepend(fragment);
+    
+    currentRenderedCount += messagesToPrepend.length;
+    const newScrollHeight = messagesContainer.scrollHeight;
+    
+    // 保持滚动位置，避免跳动
+    messagesContainer.scrollTop += (newScrollHeight - oldScrollHeight);
+    
+    if (totalMessages > currentRenderedCount) {
+        prependLoadMoreButton(messagesContainer);
+    }
+}
         
 // ▼▼▼ 【请用这个已更新的版本】替换旧的 renderWallpaperScreen 函数 ▼▼▼
         function renderWallpaperScreen() { 
@@ -16485,37 +16648,33 @@ async function renderChatList() {
             }
         }
         // ▲▲▲ 替换结束 ▲▲▲
-        /**
-         * 【全新】滚动到并高亮显示原始消息
-         * @param {number} originalTimestamp - 要跳转到的原始消息的时间戳
-         */
-        function scrollToOriginalMessage(originalTimestamp) {
-            // 1. 构建选择器，精确查找原始消息的 DOM 元素
-            const selector = `.message-bubble[data-timestamp="${originalTimestamp}"]`;
-            const originalMessageBubble = document.querySelector(selector);
+/**
+ * 【已简化 | V2.0】滚动到并高亮显示原始消息
+ * @param {number} originalTimestamp - 要跳转到的原始消息的时间戳
+ */
+function scrollToOriginalMessage(originalTimestamp) {
+    const selector = `.message-bubble[data-timestamp="${originalTimestamp}"]`;
+    const originalMessageBubble = document.querySelector(selector);
+
+    if (originalMessageBubble) {
+        originalMessageBubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
-            // 2. 检查消息是否在当前屏幕上
-            if (originalMessageBubble) {
-                // 3. 如果找到了，就平滑地滚动到它的位置
-                originalMessageBubble.scrollIntoView({
-                    behavior: 'smooth', // 平滑滚动
-                    block: 'center'     // 尽量让它停在屏幕中央
-                });
+        // 移除可能存在的旧高亮，重新触发动画
+        originalMessageBubble.classList.remove('highlighted');
+        // 强制浏览器重绘，确保动画能再次播放
+        void originalMessageBubble.offsetWidth; 
         
-                // 4. 添加高亮效果，并在1.5秒后自动移除
-                originalMessageBubble.classList.add('highlighted');
-                setTimeout(() => {
-                    // 在移除前再次检查元素是否存在，避免在用户快速切换页面时出错
-                    if (document.body.contains(originalMessageBubble)) {
-                        originalMessageBubble.classList.remove('highlighted');
-                    }
-                }, 1500); // 高亮持续1.5秒
+        originalMessageBubble.classList.add('highlighted');
         
-            } else {
-                // 5. 如果在当前加载的消息中找不到，给用户一个提示
-                alert("原始消息尚未加载，请向上滑动加载更早的记录后再试。");
+        // 动画结束后自动移除class，以便下次能再次触发
+        setTimeout(() => {
+            if (document.body.contains(originalMessageBubble)) {
+                originalMessageBubble.classList.remove('highlighted');
             }
-        }
+        }, 1500); // 动画持续1.5秒
+    }
+}
+
         // ▼▼▼ 【最终修复版】请用这个全新的函数，完整替换旧的 createMessageElement 函数 ▼▼▼
         async function createMessageElement(msg, chat) {
         
@@ -16935,57 +17094,65 @@ async function renderChatList() {
         }
 		// ▲▲▲ 替换结束 ▲▲▲
         
-        /* ▼▼▼ 请用这个【新版本】的函数完整替换旧的 openChat 函数 ▼▼▼ */
-        async function openChat(chatId) {
-            state.activeChatId = chatId;
-            const chat = state.chats[chatId];
-            if (!chat) return; // 安全检查
-        
-            if (chat.unreadCount > 0) {
-                chat.unreadCount = 0;
-                await db.chats.put(chat);
-            }
-            applyLyricsBarPosition(chat); 
-            renderChatInterface(chatId);
-            showScreen('chat-interface-screen');
-            window.updateListenTogetherIconProxy(state.activeChatId);
-            
-            // --- 按钮显隐逻辑 ---
-            const isGroup = chat.isGroup || false;
-            
-            // 切换通话按钮
-            toggleCallButtons(isGroup);
-            
-            // 切换群公告按钮
-            document.getElementById('show-announcement-board-btn').style.display = isGroup ? 'flex' : 'none';
-            
-            // 切换“拍一拍”按钮
-            const patBtn = document.getElementById('pat-btn');
-            if (patBtn) {
-                patBtn.style.display = isGroup ? 'none' : 'flex';
-            }
-        
-            // 【【【核心修改就在这里】】】
-            // 切换“购物”和“五子棋”按钮
-            const shoppingBtn = document.getElementById('open-shopping-btn');
-            const gomokuBtn = document.getElementById('gomoku-btn');
-            if (shoppingBtn && gomokuBtn) {
-                // 购物按钮在所有聊天中都显示
-                shoppingBtn.style.display = 'flex';
-                // 五子棋按钮只在单聊中显示
-                gomokuBtn.style.display = isGroup ? 'none' : 'flex';
-            }
-            // --- 修改结束 ---
-        
-            // 触发AI响应的逻辑（保持不变）
-            if (!chat.isGroup && chat.relationship?.status === 'pending_ai_approval') {
-                console.log(`检测到好友申请待处理状态，为角色 "${chat.name}" 自动触发AI响应...`);
-                triggerAiResponse();
-            }
-            
-            document.getElementById('send-poll-btn').style.display = isGroup ? 'flex' : 'none';
+/**
+ * 【V2.1 | 智能渲染版】打开聊天界面
+ * - 如果聊天已打开，则不执行任何操作，避免重绘。
+ * - 如果未打开，则执行完整的渲染流程。
+ * @param {string} chatId - 要打开的聊天ID
+ * @returns {Promise<void>}
+ */
+function openChat(chatId) {
+    return new Promise(async (resolve) => {
+        // 【【【核心修复1：添加“守卫”检查】】】
+        // 如果当前已经是这个聊天界面，就什么都不做，直接返回。
+        // 这能从根本上杜绝所有不必要的重渲染和界面闪烁。
+        if (state.activeChatId === chatId && document.getElementById('chat-interface-screen').classList.contains('active')) {
+            resolve();
+            return;
         }
-        /* ▲▲▲ 替换结束 ▲▲▲ */
+
+        state.activeChatId = chatId;
+        const chat = state.chats[chatId];
+        if (!chat) {
+            resolve();
+            return;
+        }
+
+        if (chat.unreadCount > 0) {
+            chat.unreadCount = 0;
+            await db.chats.put(chat);
+        }
+        applyLyricsBarPosition(chat); 
+        await renderChatInterface(chatId); // 【核心修复2】等待渲染完成后再继续
+        showScreen('chat-interface-screen');
+        window.updateListenTogetherIconProxy(state.activeChatId);
+        
+        const isGroup = chat.isGroup || false;
+        
+        toggleCallButtons(isGroup);
+        document.getElementById('show-announcement-board-btn').style.display = isGroup ? 'flex' : 'none';
+        
+        const patBtn = document.getElementById('pat-btn');
+        if (patBtn) {
+            patBtn.style.display = isGroup ? 'none' : 'flex';
+        }
+    
+        const shoppingBtn = document.getElementById('open-shopping-btn');
+        const gomokuBtn = document.getElementById('gomoku-btn');
+        if (shoppingBtn && gomokuBtn) {
+            shoppingBtn.style.display = 'flex';
+            gomokuBtn.style.display = isGroup ? 'none' : 'flex';
+        }
+
+        if (!chat.isGroup && chat.relationship?.status === 'pending_ai_approval') {
+            triggerAiResponse();
+        }
+        
+        document.getElementById('send-poll-btn').style.display = isGroup ? 'flex' : 'none';
+        
+        resolve(); // 告知调用方，打开操作已完成
+    });
+}
         
         
         
@@ -28731,15 +28898,16 @@ function stopSilentAudio() {
 }
 
 /**
- * 【核心】播放TTS语音
- * @param {HTMLElement} bodyElement - 被点击的 .voice-message-body 元素
+ * 【核心 | V2.2 | 终极防空窗版】播放TTS语音
+ * @param {string} text - 要播放的文本
+ * @param {string} voiceId - 语音ID
+ * @param {number | null} timestamp - 语音消息的时间戳 (可选, 用于UI更新)
  */
-// --- 请用这整块【已集成新参数】的代码，完整替换旧的 playTtsAudio 函数 ---
-async function playTtsAudio(bodyElement) {
-    const text = decodeURIComponent(bodyElement.dataset.text);
-    const voiceId = bodyElement.dataset.voiceId;
-    const waveform = bodyElement.querySelector('.voice-waveform'); // 获取波形图元素
-    const spinner = bodyElement.querySelector('.loading-spinner');
+async function playTtsAudio(text, voiceId, timestamp = null) {
+    // 尝试从DOM中获取UI元素，但允许它们为null
+    const bodyElement = timestamp ? document.querySelector(`.message-bubble[data-timestamp="${timestamp}"] .voice-message-body`) : null;
+    const waveform = bodyElement ? bodyElement.querySelector('.voice-waveform') : null;
+    const spinner = bodyElement ? bodyElement.querySelector('.loading-spinner') : null;
 
     const ttsPlayer = document.getElementById('tts-audio-player');
     if (!ttsPlayer.paused && ttsPlayer.dataset.currentText === text && ttsPlayer.dataset.currentVoiceId === voiceId) {
@@ -28748,7 +28916,7 @@ async function playTtsAudio(bodyElement) {
     }
 
     ttsPlayer.pause();
-    document.querySelectorAll('.voice-waveform').forEach(wf => wf.style.animationPlayState = 'paused'); // 暂停所有波形动画
+    document.querySelectorAll('.voice-waveform').forEach(wf => wf.style.animationPlayState = 'paused');
 
     const cacheKey = `tts_${voiceId}_${text}`;
     let cachedAudio = await db.ttsCache.get({ cacheKey: cacheKey });
@@ -28845,8 +29013,8 @@ async function playTtsAudio(bodyElement) {
         console.error("Minimax TTS API 调用失败:", error);
         await showCustomAlert("语音生成失败", `错误: ${error.message}`);
     } finally {
-        spinner.style.display = 'none';
-        waveform.style.display = 'flex'; // 无论成功失败，都恢复波形显示
+        if (spinner) spinner.style.display = 'none';
+        if (waveform) waveform.style.display = 'flex'; // 无论成功失败，都恢复波形显示
     }
 }
 
@@ -28859,58 +29027,55 @@ async function playTtsAudio(bodyElement) {
  * @param {HTMLElement} bodyElement - 触发播放的语音条元素
  */
 /**
-         * 【V2.2 | 终极防报错版】播放音频数据并控制动画
-         */
-        function playAudioFromData(audioSrc, audioType, text, voiceId, bodyElement) {
-            return new Promise((resolve, reject) => {
-                const ttsPlayer = document.getElementById('tts-audio-player');
-                const waveform = bodyElement.querySelector('.voice-waveform');
+ * 【V2.2 | 终极防报错版】播放音频数据并控制动画
+ * @param {HTMLElement | null} bodyElement - 触发播放的语音条元素 (可能为null)
+ */
+function playAudioFromData(audioSrc, audioType, text, voiceId, bodyElement) {
+    return new Promise((resolve, reject) => {
+        const ttsPlayer = document.getElementById('tts-audio-player');
+        // 【核心修复1】只有在 bodyElement 存在时，才去获取 waveform
+        const waveform = bodyElement ? bodyElement.querySelector('.voice-waveform') : null;
 
-                // --- 【【【核心修复就在这里！】】】 ---
-                // 1. 我们把需要控制的 waveform 元素，直接“附加”到播放器对象上。
-                //    这样播放器就永远知道该控制哪个波形图了。
-                ttsPlayer._currentWaveform = waveform;
+        // 【核心修复2】将 waveform (可能为null) 附加到播放器上
+        ttsPlayer._currentWaveform = waveform;
 
-                // 2. 为了绝对安全，先清除掉可能存在的旧的事件处理器。
-                ttsPlayer.onended = null;
-                ttsPlayer.onpause = null;
-                // --- 修复结束 ---
+        ttsPlayer.onended = null;
+        ttsPlayer.onpause = null;
 
-                ttsPlayer.src = audioSrc;
-                ttsPlayer.type = audioType;
-                ttsPlayer.dataset.currentText = text;
-                ttsPlayer.dataset.currentVoiceId = voiceId;
-                
-                const playPromise = ttsPlayer.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        // 播放时，也通过这个可靠的连接来启动动画
-                        if (ttsPlayer._currentWaveform) {
-                            ttsPlayer._currentWaveform.style.animationPlayState = 'running';
-                        }
-                        resolve();
-                    }).catch(error => {
-                        console.error("音频播放失败:", error);
-                        if (ttsPlayer._currentWaveform) { // 播放失败也要确保动画是暂停的
-                            ttsPlayer._currentWaveform.style.animationPlayState = 'paused';
-                        }
-                        reject(error);
-                    });
+        ttsPlayer.src = audioSrc;
+        ttsPlayer.type = audioType;
+        ttsPlayer.dataset.currentText = text;
+        ttsPlayer.dataset.currentVoiceId = voiceId;
+        
+        const playPromise = ttsPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                // 【核心修复3】只有在 waveform 存在时，才尝试控制动画
+                if (ttsPlayer._currentWaveform) {
+                    ttsPlayer._currentWaveform.style.animationPlayState = 'running';
                 }
-                
-                // 3. 在事件处理器中，我们通过 this (也就是 ttsPlayer 自己) 来找到附加的波形图
-                ttsPlayer.onended = function() {
-                    if (this._currentWaveform) {
-                        this._currentWaveform.style.animationPlayState = 'paused';
-                    }
-                };
-                ttsPlayer.onpause = function() {
-                    if (this._currentWaveform) {
-                        this._currentWaveform.style.animationPlayState = 'paused';
-                    }
-                };
+                resolve();
+            }).catch(error => {
+                console.error("音频播放失败:", error);
+                if (ttsPlayer._currentWaveform) {
+                    ttsPlayer._currentWaveform.style.animationPlayState = 'paused';
+                }
+                reject(error);
             });
         }
+        
+        ttsPlayer.onended = function() {
+            if (this._currentWaveform) {
+                this._currentWaveform.style.animationPlayState = 'paused';
+            }
+        };
+        ttsPlayer.onpause = function() {
+            if (this._currentWaveform) {
+                this._currentWaveform.style.animationPlayState = 'paused';
+            }
+        };
+    });
+}
 
 /**
  * 切换用户自己发送的语音消息的文字显示
@@ -34280,24 +34445,61 @@ function handleDataClearPrev() {
     document.getElementById('data-clear-step-1').style.display = 'flex';
 }
 
-// --- 请用这整块【全新的、逻辑修正版】的代码，完整替换旧的 handleConfirmDataClear 函数 ---
-async function handleConfirmDataClear() {
-    const selectedItems = document.querySelectorAll('#data-clear-type-list .clear-posts-item.selected');
-    if (selectedItems.length === 0) {
-        alert("请至少选择一种要清理的数据类型。");
-        return;
+
+/**
+ * 【全新 | 专用于TTS】清理【已选定角色】的【未收藏】语音缓存
+ */
+async function handleClearSelectedCharsTtsCache() {
+    const confirmMessage = `确定要清除【已选定角色】的所有【未被收藏】的语音缓存吗？`;
+    const confirmed = await showCustomConfirm('确认清理TTS缓存', confirmMessage, { confirmButtonClass: 'btn-danger' });
+    if (!confirmed) return;
+
+    await showCustomAlert("请稍候...", "正在清理选中角色的语音缓存...");
+
+    try {
+        let clearedCount = 0;
+        await db.transaction('rw', db.ttsCache, db.voiceFavorites, db.chats, async () => {
+            const favorites = await db.voiceFavorites.toArray();
+            const favoriteKeys = new Set(favorites.map(fav => fav.cacheKey));
+            let keysToDelete = [];
+
+            for (const charId of selectedCharsForClear) {
+                if (charId === 'user') continue;
+                const chat = await db.chats.get(charId); // 从数据库获取最新数据
+                if (chat && !chat.isGroup) {
+                    const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+                    chat.history.forEach(msg => {
+                        if (msg.type === 'voice_message' && msg.role === 'assistant') {
+                            const cacheKey = `tts_${voiceId}_${msg.content}`;
+                            if (!favoriteKeys.has(cacheKey)) {
+                                keysToDelete.push(cacheKey);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (keysToDelete.length > 0) {
+                clearedCount = await db.ttsCache.where('cacheKey').anyOf(keysToDelete).delete();
+            }
+        });
+
+        document.getElementById('data-clear-wizard-modal').classList.remove('visible');
+        await showCustomAlert('清理完成', `已成功为选中角色清除了 ${clearedCount} 条语音缓存。`);
+
+    } catch (error) {
+        console.error("清理TTS缓存失败:", error);
+        await showCustomAlert("清理失败", `操作失败: ${error.message}`);
     }
+}
 
-    let typesToClear = Array.from(selectedItems).map(item => item.dataset.typeId);
-    const isClearingTTS = typesToClear.includes('tts_cache');
 
-    // --- 1. 构建更智能的确认信息 ---
-    let confirmMessage = `此操作将永久删除您选择的所有数据，且无法恢复！<br><br>`;
-    if (isClearingTTS) {
-        confirmMessage += `<strong style="color:#ffc107;">注意：TTS语音缓存是全局共享的，此操作将清空【所有角色】的语音缓存。</strong><br><br>`;
-    }
-    confirmMessage += `<strong>确定要继续吗？</strong>`;
-
+/**
+ * 【已更新】处理通用的数据清理逻辑（现在不再处理TTS）
+ * @param {Array<string>} typesToClear - 要清理的数据类型数组
+ */
+async function handleConfirmDataClear(typesToClear) {
+    const confirmMessage = `此操作将永久删除您为【已选定角色】选择的所有数据，且无法恢复！<br><br><strong>确定要继续吗？</strong>`;
     const confirmed = await showCustomConfirm('最后确认！', confirmMessage, { confirmButtonClass: 'btn-danger', confirmText: '确认删除' });
     if (!confirmed) return;
 
@@ -34305,17 +34507,7 @@ async function handleConfirmDataClear() {
 
     try {
         await db.transaction('rw', db.tables, async () => {
-            // --- 2. 【核心修复】将TTS缓存的清理逻辑从循环中分离出来 ---
-            if (isClearingTTS) {
-                console.log("正在执行全局清理：TTS 语音缓存...");
-                await db.ttsCache.clear();
-                // 同时清理内存中的缓存
-                if (state.ttsCache) {
-                    state.ttsCache.clear();
-                }
-            }
-
-            // --- 3. 只对角色相关的类型进行循环清理 ---
+            // 【核心修改】这里的循环现在只处理非TTS的类型
             const charSpecificTypes = typesToClear.filter(t => t !== 'tts_cache');
             if (charSpecificTypes.length > 0) {
                 for (const charId of selectedCharsForClear) {
@@ -34380,6 +34572,9 @@ async function handleConfirmDataClear() {
 
 // ▲▲▲ JS代码替换结束 ▲▲▲
 
+
+
+
 // ▼▼▼ 【全新】这是“搜索聊天记录”功能的【全部核心JS代码】，请完整粘贴到 init() 函数的前面 ▼▼▼
 
 /**
@@ -34441,7 +34636,7 @@ async function handleSearchHistory() {
 }
 
 /**
- * 将搜索结果渲染到屏幕上
+ * 【已修复跳转逻辑】将搜索结果渲染到屏幕上
  */
 async function renderSearchResults(results) {
     const listEl = document.getElementById('chat-search-results-list');
@@ -34469,21 +34664,15 @@ async function renderSearchResults(results) {
         const messageEl = await createMessageElement(msg, chat);
         if (messageEl) {
             messageEl.style.cursor = 'pointer';
-            messageEl.addEventListener('click', () => jumpToOriginalMessage(msg.timestamp));
+            // ▼▼▼ 【【【核心修复就在这里！】】】 ▼▼▼
+            // 我们现在直接调用强大的 navigateToMessage 函数！
+            messageEl.addEventListener('click', () => navigateToMessage(chat.id, msg.timestamp));
+            // ▲▲▲ 修复结束 ▲▲▲
             listEl.appendChild(messageEl);
         }
     }
 }
 
-/**
- * 从搜索结果跳转回原始消息位置
- */
-function jumpToOriginalMessage(timestamp) {
-    showScreen('chat-interface-screen');
-    setTimeout(() => {
-        scrollToOriginalMessage(timestamp);
-    }, 100);
-}
 
 /**
  * 重置搜索过滤器
@@ -36605,7 +36794,371 @@ function renderUndercoverLog() {
 }
 // ▲▲▲ 游戏功能核心JS代码结束 ▲▲▲
 
+// ▼▼▼ 【全新】语音管理功能【全部核心JS代码】 ▼▼▼
 
+/**
+ * 【总入口】打开语音管理浮动窗口
+ */
+function openVoiceManager() {
+    const modal = document.getElementById('voice-manager-modal');
+    // 默认打开缓存页
+    document.getElementById('voice-tab-cache').click();
+    modal.classList.add('visible');
+}
+
+// --- 请用这整块【全新的、已修复】的版本，替换旧的 renderVoiceCacheList 函数 ---
+async function renderVoiceCacheList() {
+    const listEl = document.getElementById('voice-cache-list');
+    listEl.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-secondary);">正在扫描缓存...</p>';
+
+    const chat = state.chats[state.activeChatId];
+    if (!chat) return;
+
+    // 步骤 1: 【正确逻辑】首先，只获取当前角色的所有AI语音消息
+    const voiceMessages = chat.history.filter(msg => msg.type === 'voice_message' && msg.role === 'assistant');
+
+    if (voiceMessages.length === 0) {
+        listEl.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-secondary);">当前角色没有可缓存的语音消息。</p>';
+        return;
+    }
+
+    // 步骤 2: 【正确逻辑】然后，一次性获取所有的缓存“钥匙”，存入一个高效的Set中
+    const allCache = await db.ttsCache.toArray();
+    const allCachedKeys = new Set(allCache.map(c => c.cacheKey));
+    const favorites = await db.voiceFavorites.toArray();
+    const favoriteKeys = new Set(favorites.map(fav => fav.cacheKey));
+
+    let itemsHtml = '';
+    const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+
+    // 步骤 3: 【正确逻辑】遍历当前角色的语音消息，去Set中检查它是否存在
+    for (const msg of voiceMessages) {
+        const cacheKey = `tts_${voiceId}_${msg.content}`;
+        
+        // 只有当这个消息的“钥匙”确实存在于缓存Set中时，我们才渲染它
+        if (allCachedKeys.has(cacheKey)) {
+            const isFavorited = favoriteKeys.has(cacheKey);
+            itemsHtml += `
+                <div class="voice-manager-item" data-timestamp="${msg.timestamp}">
+                    <p class="item-text">${msg.content}</p>
+                    <div class="item-actions">
+                        <button class="item-action-btn play-btn" title="播放">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"></path></svg>
+                        </button>
+                        <button class="item-action-btn favorite-btn ${isFavorited ? 'active' : ''}" title="${isFavorited ? '取消收藏' : '收藏'}">
+                            <svg viewBox="0 0 24 24">
+    <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"></path>
+</svg>
+                        </button>
+                        <button class="item-action-btn clear-btn" title="清除缓存">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // 步骤 4: 根据最终结果显示UI
+    listEl.innerHTML = itemsHtml || '<p style="padding:20px; text-align:center; color:var(--text-secondary);">当前角色没有已缓存的语音。</p>';
+}
+
+
+/**
+ * 【核心】渲染收藏的语音列表
+ */
+// --- 请用这个【已修复】的版本，替换旧的 renderVoiceFavoritesList 函数 ---
+async function renderVoiceFavoritesList() {
+    const listEl = document.getElementById('voice-favorites-list');
+    listEl.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-secondary);">正在加载收藏...</p>';
+
+    // 【核心修复】在这里加入对 chatId 的筛选
+    const favorites = await db.voiceFavorites
+        .where('chatId').equals(state.activeChatId) // <-- 只查找属于当前角色的收藏
+        .reverse()
+        .sortBy('timestamp');
+
+    if (favorites.length === 0) {
+        listEl.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-secondary);">当前角色还没有收藏任何语音。</p>';
+        return;
+    }
+
+    let itemsHtml = '';
+    favorites.forEach(fav => {
+        const chat = state.chats[fav.chatId];
+        const authorName = chat ? chat.name : '未知角色';
+        itemsHtml += `
+            <div class="voice-manager-item" data-favorite-id="${fav.id}">
+                <p class="item-text" title="来自 ${authorName} 的聊天">“${fav.text}”</p>
+                <div class="item-actions">
+                    <button class="item-action-btn play-btn" title="播放">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"></path></svg>
+                    </button>
+                    <button class="item-action-btn unfavorite-btn" title="取消收藏">
+                        <svg viewBox="0 0 24 24">
+    <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"></path>
+</svg>
+                    </button>
+                    <button class="item-action-btn jump-btn" title="跳转到原消息">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    listEl.innerHTML = itemsHtml;
+}
+/**
+ * 收藏一条语音消息
+ */
+// --- 请用这个【已添加UI更新】的版本替换旧的 handleFavoriteVoice 函数 ---
+async function handleFavoriteVoice(timestamp) {
+    const chat = state.chats[state.activeChatId];
+    const message = chat.history.find(m => m.timestamp === timestamp);
+    if (!message || message.type !== 'voice_message') return;
+
+    const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+    const cacheKey = `tts_${voiceId}_${message.content}`;
+
+    const existing = await db.voiceFavorites.get({ cacheKey: cacheKey });
+    if (existing) { // 如果已存在，则执行取消收藏逻辑
+        await db.voiceFavorites.delete(existing.id);
+        const itemInCacheList = document.querySelector(`#voice-cache-list .voice-manager-item[data-timestamp="${timestamp}"] .favorite-btn`);
+        if (itemInCacheList) {
+            itemInCacheList.classList.remove('active');
+            itemInCacheList.title = '收藏';
+        }
+        return;
+    }
+
+    const favoriteData = {
+        cacheKey: cacheKey,
+        chatId: chat.id,
+        timestamp: message.timestamp,
+        text: message.content,
+        voiceId: voiceId
+    };
+
+    await db.voiceFavorites.add(favoriteData);
+    const itemInCacheList = document.querySelector(`#voice-cache-list .voice-manager-item[data-timestamp="${timestamp}"] .favorite-btn`);
+    if (itemInCacheList) {
+        itemInCacheList.classList.add('active');
+        itemInCacheList.title = '取消收藏';
+    }
+}
+
+// --- 请用这个【已添加UI更新】的版本替换旧的 handleUnfavoriteVoice 函数 ---
+async function handleUnfavoriteVoice(favoriteId) {
+    const favorite = await db.voiceFavorites.get(favoriteId);
+    if (!favorite) return;
+    
+    await db.voiceFavorites.delete(favoriteId);
+    
+    const itemInFavList = document.querySelector(`#voice-favorites-list .voice-manager-item[data-favorite-id="${favoriteId}"]`);
+    if (itemInFavList) itemInFavList.remove();
+    
+    const chat = state.chats[favorite.chatId];
+    if (chat && chat.id === state.activeChatId) { // 确保只更新当前角色的缓存列表UI
+        const itemInCacheList = document.querySelector(`#voice-cache-list .voice-manager-item[data-timestamp="${favorite.timestamp}"] .favorite-btn`);
+        if (itemInCacheList) {
+            itemInCacheList.classList.remove('active');
+            itemInCacheList.title = '收藏';
+        }
+    }
+}
+// --- 请将这个【新函数】粘贴到功能函数定义区 ---
+/**
+ * 一键取消当前角色所有收藏的语音
+ */
+async function handleUnfavoriteAll() {
+    const confirmed = await showCustomConfirm("确认操作", `确定要取消当前角色的所有语音收藏吗？`, { confirmButtonClass: 'btn-danger' });
+    if (!confirmed) return;
+
+    await db.voiceFavorites.where('chatId').equals(state.activeChatId).delete();
+    await showCustomAlert("操作完成", "已全部取消收藏！");
+    await renderVoiceFavoritesList(); // 刷新收藏页
+    await renderVoiceCacheList();   // 刷新缓存页（更新按钮状态）
+}
+/**
+ * 清除单条语音缓存
+ */
+// --- 请用这个【已修复】的版本替换旧的 handleClearSingleCache 函数 ---
+async function handleClearSingleCache(timestamp) {
+    const chat = state.chats[state.activeChatId];
+    const message = chat.history.find(m => m.timestamp === timestamp);
+    if (!message) return;
+    
+    const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+    const cacheKey = `tts_${voiceId}_${message.content}`;
+
+    const favorite = await db.voiceFavorites.get({ cacheKey: cacheKey });
+    if (favorite) {
+        await showCustomAlert("操作受阻", "这条语音已被收藏，无法单独清除缓存。请先在“收藏”页取消收藏。");
+        return;
+    }
+
+    // 【核心修复】使用 cacheKey 进行删除，而不是时间戳
+    await db.ttsCache.where('cacheKey').equals(cacheKey).delete();
+    alert("该条语音缓存已清除。");
+    // 从DOM中移除该项
+    const itemEl = document.querySelector(`#voice-cache-list .voice-manager-item[data-timestamp="${timestamp}"]`);
+    if (itemEl) itemEl.remove();
+}
+
+
+
+/**
+ * 【全新】一键收藏当前角色缓存列表中的所有语音
+ */
+async function handleFavoriteAllCache() {
+    const chat = state.chats[state.activeChatId];
+    if (!chat) return;
+
+    const itemsToFavorite = document.querySelectorAll('#voice-cache-list .voice-manager-item');
+    if (itemsToFavorite.length === 0) {
+        alert("当前没有可收藏的缓存项。");
+        return;
+    }
+
+    const confirmed = await showCustomConfirm("全部收藏", `确定要收藏当前显示的 ${itemsToFavorite.length} 条语音吗？`);
+    if (!confirmed) return;
+
+    // ▼▼▼ 核心修改就在这里！ ▼▼▼
+    for (const item of itemsToFavorite) {
+        // 1. 检查这个项目是否已经被收藏了 (通过按钮是否已有 'active' class 来判断)
+        const favoriteBtn = item.querySelector('.favorite-btn');
+        if (favoriteBtn && !favoriteBtn.classList.contains('active')) {
+            // 2. 只有在【未被收藏】的情况下，才调用收藏函数
+            const timestamp = parseInt(item.dataset.timestamp);
+            if (!isNaN(timestamp)) {
+                await handleFavoriteVoice(timestamp);
+            }
+        }
+    }
+    // ▲▲▲ 修改结束 ▲▲▲
+    
+    await showCustomAlert("操作完成", "已全部收藏！");
+    // 刷新缓存列表，以更新所有按钮的“已收藏”状态
+    await renderVoiceCacheList();
+}
+
+/**
+ * 清除当前角色的所有未被收藏的语音缓存
+ */
+async function handleClearCharacterCache() {
+    const chat = state.chats[state.activeChatId];
+    if (!chat) return;
+
+    const confirmed = await showCustomConfirm("确认操作", `确定要清除“${chat.name}”的所有未收藏语音缓存吗？`, { confirmButtonClass: 'btn-danger' });
+    if (!confirmed) return;
+
+    const voiceMessages = chat.history.filter(msg => msg.type === 'voice_message' && msg.role === 'assistant');
+    const favorites = await db.voiceFavorites.toArray();
+    const favoriteKeys = new Set(favorites.map(fav => fav.cacheKey));
+    const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+    
+    const keysToDelete = voiceMessages
+        .map(msg => `tts_${voiceId}_${msg.content}`)
+        .filter(key => !favoriteKeys.has(key));
+    
+    if (keysToDelete.length > 0) {
+        await db.ttsCache.where('cacheKey').anyOf(keysToDelete).delete();
+        await showCustomAlert("清理完成", `已成功清除 ${keysToDelete.length} 条语音缓存。`);
+    } else {
+        alert("没有可清除的缓存。");
+    }
+    await renderVoiceCacheList();
+}
+
+/**
+ * 【全新 | 核心导航函数 V1.0】
+ * 智能导航到指定聊天的指定消息，如果消息未加载，会自动加载。
+ * @param {string} chatId - 目标聊天ID
+ * @param {number} timestamp - 目标消息的时间戳
+ */
+async function navigateToMessage(chatId, timestamp) {
+    // 1. 切换到目标聊天界面 (openChat会自动处理UI切换和最新消息的渲染)
+    await openChat(chatId);
+    
+    // 确保我们拿到了最新的chat对象
+    const chat = state.chats[chatId];
+    if (!chat) return;
+
+    // 2. 检查目标消息是否已经存在于当前的DOM中
+    let targetElement = document.querySelector(`.message-bubble[data-timestamp="${timestamp}"]`);
+    
+    // 3. 【核心循环】如果找不到，并且我们确认还有未加载的历史记录，就持续加载
+    while (!targetElement && currentRenderedCount < chat.history.length) {
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        
+        // a. 如果“加载更多”按钮还存在
+        if (loadMoreBtn) {
+            console.log(`导航：未找到消息 ${timestamp}，正在加载更多...`);
+            // b. 模拟一次点击，并等待它完成
+            await loadMoreMessages();
+            // c. 再次尝试在更新后的DOM中寻找目标
+            targetElement = document.querySelector(`.message-bubble[data-timestamp="${timestamp}"]`);
+        } else {
+            // d. 如果按钮不存在了，说明所有消息都已加载完毕，可以跳出循环了
+            break;
+        }
+    }
+    
+    // 4. 最终检查：
+    if (targetElement) {
+        // 如果最终找到了，就执行滚动和高亮
+        scrollToOriginalMessage(timestamp);
+    } else {
+        // 如果把所有消息都加载完了还是没找到，才提示用户
+        alert("在聊天记录中找不到原始消息，它可能已被删除。");
+    }
+}
+
+/**
+ * 将所有收藏的语音加入音乐播放列表
+ */
+// --- 请用这个【已修复】的版本替换旧的 addAllFavoritesToPlaylist 函数 ---
+async function addAllFavoritesToPlaylist() {
+    // 【核心修复】改为只获取当前角色的收藏
+    const favorites = await db.voiceFavorites.where('chatId').equals(state.activeChatId).toArray();
+
+    if (favorites.length === 0) {
+        alert("当前角色没有可添加的收藏。");
+        return;
+    }
+
+    const newTracks = [];
+    for (const fav of favorites) {
+        const chat = state.chats[fav.chatId];
+        const authorName = chat ? chat.name : '未知角色';
+        
+        const cachedAudio = await db.ttsCache.get({ cacheKey: fav.cacheKey });
+        if (cachedAudio && cachedAudio.url.startsWith('data:')) {
+            const fetchRes = await fetch(cachedAudio.url);
+            const blob = await fetchRes.blob();
+            
+            newTracks.push({
+                // 【核心修复】歌名截取前20个字符
+                name: fav.text.substring(0, 6) + (fav.text.length > 6 ? '...' : ''),
+                artist: authorName,
+                src: blob,
+                isLocal: true,
+                // 【核心修复】将语音文本格式化为LRC歌词
+                lrcContent: `[00:00.00]${fav.text}`
+            });
+        }
+    }
+    
+    if (newTracks.length > 0) {
+        musicState.playlist.push(...newTracks);
+        await saveGlobalPlaylist();
+        await showCustomAlert("添加成功", `已将 ${newTracks.length} 条收藏语音添加到“一起听”播放列表的末尾。`);
+        document.getElementById('voice-manager-modal').classList.remove('visible');
+    } else {
+        alert("未能成功转换任何收藏为播放列表项，可能是因为缓存已丢失。");
+    }
+}
+// ▲▲▲ 核心JS代码粘贴结束 ▲▲▲
 
               // ===================================================================
                 // 4. 初始化函数 init()
@@ -36871,6 +37424,108 @@ window.switchToCharHomeScreen = switchToCharHomeScreen;
                     // --- 各种事件监听器 ---
                     // ==========================================================
 					
+					// ▼▼▼ 【全新】语音管理功能事件监听器 ▼▼▼
+
+// 1. 打开主窗口的按钮
+document.getElementById('voice-manager-btn').addEventListener('click', openVoiceManager);
+
+// 2. 窗口内的页签切换
+const voiceModal = document.getElementById('voice-manager-modal');
+voiceModal.querySelector('#voice-tab-cache').addEventListener('click', () => {
+    voiceModal.querySelector('#voice-tab-cache').classList.add('active');
+    voiceModal.querySelector('#voice-tab-favorites').classList.remove('active');
+    voiceModal.querySelector('#voice-cache-view').style.display = 'block';
+    voiceModal.querySelector('#voice-favorites-view').style.display = 'none';
+    voiceModal.querySelector('#voice-cache-footer').style.display = 'flex';
+    voiceModal.querySelector('#voice-favorites-footer').style.display = 'none';
+    renderVoiceCacheList();
+});
+voiceModal.querySelector('#voice-tab-favorites').addEventListener('click', () => {
+    voiceModal.querySelector('#voice-tab-favorites').classList.add('active');
+    voiceModal.querySelector('#voice-tab-cache').classList.remove('active');
+    voiceModal.querySelector('#voice-favorites-view').style.display = 'block';
+    voiceModal.querySelector('#voice-cache-view').style.display = 'none';
+    voiceModal.querySelector('#voice-favorites-footer').style.display = 'flex';
+    voiceModal.querySelector('#voice-cache-footer').style.display = 'none';
+    renderVoiceFavoritesList();
+});
+
+// 3. 缓存页的列表项和页脚按钮 (事件委托)
+// ▼▼▼ 【全新】语音管理功能事件监听器 ▼▼▼
+document.getElementById('voice-cache-list').addEventListener('click', async (e) => {
+    const item = e.target.closest('.voice-manager-item');
+    if (!item) return;
+    const timestamp = parseInt(item.dataset.timestamp);
+    if (isNaN(timestamp)) return;
+    const chat = state.chats[state.activeChatId];
+    const message = chat.history.find(m => m.timestamp === timestamp);
+    if (!message) return;
+
+    if (e.target.closest('.play-btn')) {
+        const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
+        // 【核心修复】直接传递数据，而不是DOM元素
+        await playTtsAudio(message.content, voiceId, timestamp);
+    }
+    if (e.target.closest('.favorite-btn')) {
+        await handleFavoriteVoice(timestamp);
+    }
+    if (e.target.closest('.clear-btn')) {
+        await handleClearSingleCache(timestamp);
+    }
+});
+document.getElementById('fav-all-cache-btn').addEventListener('click', handleFavoriteAllCache);
+document.getElementById('clear-all-cache-btn').addEventListener('click', handleClearCharacterCache);
+
+document.getElementById('unfav-all-btn').addEventListener('click', handleUnfavoriteAll);
+
+// 4. 收藏页的列表项和页脚按钮 (事件委托)
+document.getElementById('voice-favorites-list').addEventListener('click', async (e) => {
+    const item = e.target.closest('.voice-manager-item');
+    if (!item) return;
+    const favoriteId = parseInt(item.dataset.favoriteId);
+    if (isNaN(favoriteId)) return;
+
+    if (e.target.closest('.play-btn')) {
+        const favorite = await db.voiceFavorites.get(favoriteId);
+        if (favorite) {
+            // 【核心修复】同样直接传递数据
+            await playTtsAudio(favorite.text, favorite.voiceId, favorite.timestamp);
+        }
+    }
+    if (e.target.closest('.jump-btn')) {
+        // ▼▼▼ 【【【核心修复就在这里！】】】 ▼▼▼
+        // 我们在这里重新获取一次 favorite 对象，确保它在此作用域内有效
+        const favorite = await db.voiceFavorites.get(favoriteId);
+        if (favorite) {
+            // 现在可以安全地调用跳转函数了
+			document.getElementById('voice-manager-modal').classList.remove('visible');
+            navigateToMessage(favorite.chatId, favorite.timestamp);
+        }
+        // ▲▲▲ 修复结束 ▲▲▲
+    }
+    if (e.target.closest('.unfavorite-btn')) {
+        await handleUnfavoriteVoice(favoriteId);
+    }
+});
+document.getElementById('add-all-to-playlist-btn').addEventListener('click', addAllFavoritesToPlaylist);
+
+
+// 5. 统一的关闭按钮
+document.getElementById('close-voice-manager-btn').addEventListener('click', () => {
+    voiceModal.classList.remove('visible');
+});
+
+// 6. 聊天消息长按菜单中的“收藏语音”
+document.getElementById('message-actions-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'favorite-voice-message-btn') {
+        if (activeMessageTimestamp) {
+            handleFavoriteVoice(activeMessageTimestamp);
+        }
+        hideMessageActions();
+    }
+});
+
+// ▲▲▲ 新增事件绑定结束 ▲▲▲
 					
 					// ▼▼▼ 【全新】实时更新TTS高级参数滑块的数值显示 ▼▼▼
 					function setupTtsSliderListener(sliderId, displayId) {
@@ -37026,69 +37681,29 @@ document.getElementById('data-clear-prev-btn').addEventListener('click', handleD
 
 // “下一步”和“确认清理”按钮
 document.getElementById('data-clear-next-btn').addEventListener('click', handleDataClearNext);
-document.getElementById('confirm-data-clear-btn').addEventListener('click', handleConfirmDataClear);
-// ▼▼▼ 【全新】这是为清理TTS缓存添加的独立、更详细的事件处理 ▼▼▼
+// ▼▼▼ 【全新 | V2.0】高级数据清理向导事件监听器 ▼▼▼
+// ... (除了下面的按钮，其他向导按钮的事件监听器保持不变) ...
+
+// 【总入口】为最终确认按钮绑定唯一的、智能的事件处理器
 document.getElementById('confirm-data-clear-btn').addEventListener('click', async () => {
-    // 检查是否只选中了 TTS 缓存这一个选项
     const selectedItems = document.querySelectorAll('#data-clear-type-list .clear-posts-item.selected');
-    const selectedTypes = Array.from(selectedItems).map(item => item.dataset.typeId);
-
-    if (selectedTypes.length === 1 && selectedTypes[0] === 'tts_cache') {
-        // 如果只清理TTS缓存，就走这个专门的流程
-        const modal = document.getElementById('tts-cache-clear-modal');
-        const titleEl = document.getElementById('tts-cache-clear-title');
-        const bodyEl = document.getElementById('tts-cache-clear-body');
-        const confirmBtn = document.getElementById('tts-cache-clear-confirm-btn');
-        const cancelBtn = document.getElementById('tts-cache-clear-cancel-btn');
-
-        try {
-            const count = await db.ttsCache.count();
-            if (count === 0) {
-                alert("TTS语音缓存是空的，无需清理。");
-                document.getElementById('data-clear-wizard-modal').classList.remove('visible');
-                return;
-            }
-
-            const dbSize = await navigator.storage.estimate();
-            const usagePercentage = (dbSize.usage / dbSize.quota * 100).toFixed(2);
-            
-            titleEl.textContent = '确认清理TTS缓存';
-            bodyEl.innerHTML = `
-                <p>当前共缓存了 <strong>${count}</strong> 条语音文件。</p>
-                <p>预计将释放大量存储空间。</p>
-                <p style="font-size: 12px; color: #8a8a8a;">(当前数据库占用: ${usagePercentage}%)</p>
-                <p style="color: #ff3b30;"><strong>此操作不可撤销！</strong></p>
-            `;
-
-            const newConfirmBtn = confirmBtn.cloneNode(true);
-            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            newConfirmBtn.onclick = async () => {
-                bodyEl.innerHTML = '<p>正在清理，请稍候...</p>';
-                await db.ttsCache.clear();
-                // 清理 state 中的内存缓存
-                if (state.ttsCache) {
-                    state.ttsCache.clear();
-                }
-                modal.classList.remove('visible');
-                document.getElementById('data-clear-wizard-modal').classList.remove('visible');
-                await showCustomAlert('清理成功', `已成功删除 ${count} 条语音缓存文件！`);
-            };
-
-            const newCancelBtn = cancelBtn.cloneNode(true);
-            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-            newCancelBtn.onclick = () => modal.classList.remove('visible');
-
-            modal.classList.add('visible');
-
-        } catch(e) {
-            console.error("检查TTS缓存时出错:", e);
-            alert("无法检查缓存状态，请重试。");
-        }
-
-    } else {
-        // 如果还勾选了其他项，或者没有勾选TTS，就走原来的统一清理流程
-        handleConfirmDataClear();
+    if (selectedItems.length === 0) {
+        alert("请至少选择一种要清理的数据类型。");
+        return;
     }
+
+    const typesToClear = Array.from(selectedItems).map(item => item.dataset.typeId);
+    
+    // ▼▼▼ 【核心逻辑分发】 ▼▼▼
+    // 1. 如果用户【只】选择了清理TTS缓存
+    if (typesToClear.length === 1 && typesToClear[0] === 'tts_cache') {
+        // 就调用专门为【选中角色】清理TTS缓存的函数
+        await handleClearSelectedCharsTtsCache();
+    } else {
+        // 2. 否则，就调用通用的数据清理函数
+        await handleConfirmDataClear(typesToClear);
+    }
+    // ▲▲▲ 逻辑分发结束 ▲▲▲
 });
 // ▲▲▲ 新增事件绑定结束 ▲▲▲
 // 【核心新增】“全选”复选框的事件
@@ -37785,34 +38400,36 @@ audioPlayer.addEventListener('play', () => {
 
     const target = e.target;
 
-    // ▼▼▼ 【【【语音消息的唯一处理器】】】 ▼▼▼
+    // ▼▼▼ 【【【语音消息的唯一处理器 (V2.0)】】】 ▼▼▼
     const voiceBody = target.closest('.voice-message-body[data-text]');
     if (voiceBody) {
         const chat = state.chats[state.activeChatId];
         if (!chat) return;
-
-        // 无论如何，都先切换文字的显示/隐藏
-        toggleVoiceTranscript(voiceBody);
-
         const bubble = voiceBody.closest('.message-bubble');
-        const transcriptEl = bubble ? bubble.querySelector('.voice-transcript') : null;
+        if (!bubble) return;
+        
+        // 1. 切换文字的显示/隐藏 (这部分逻辑不变)
+        toggleVoiceTranscript(voiceBody);
+        const transcriptEl = bubble.querySelector('.voice-transcript');
 
-        // 检查是否是可播放的AI语音，并且文字刚刚被展开
-        if (voiceBody.dataset.voiceId && transcriptEl && transcriptEl.style.display === 'block') {
-            
-            // 进行双重验证，防止不必要的API请求
-            
+        // 2. 【核心修复】检查是否是可播放的AI语音
+        const voiceId = voiceBody.dataset.voiceId;
+        if (voiceId) {
+            // a. 检查TTS总开关
             if (chat.settings.enableTts === false) {
                 console.log(`“${chat.name}”的TTS功能已关闭，禁止发起TTS请求。`);
                 return;
             }
+            
+            // b. 从数据属性中直接获取文本和时间戳
+            const text = decodeURIComponent(voiceBody.dataset.text);
+            const timestamp = parseInt(bubble.dataset.timestamp);
 
-            // 只有通过所有验证，才调用播放函数
-            await playTtsAudio(voiceBody);
+            // c. 直接调用我们修复后的播放函数，传递数据而不是DOM元素
+            await playTtsAudio(text, voiceId, timestamp);
         }
         
-        // 处理完语音后，立即退出，不再执行后续的其他点击判断
-        return;
+        return; // 处理完语音后，立即退出
     }
     // ▲▲▲ 语音处理逻辑结束 ▲▲▲
 
@@ -37883,7 +38500,7 @@ audioPlayer.addEventListener('play', () => {
             if (quoteBlock && quoteBlock.dataset.originalTimestamp) {
                 const originalTimestamp = parseInt(quoteBlock.dataset.originalTimestamp);
                 if (!isNaN(originalTimestamp)) {
-                    scrollToOriginalMessage(originalTimestamp);
+                    navigateToMessage(state.activeChatId, originalTimestamp);
                 }
             }
             
@@ -42012,6 +42629,42 @@ initializeMochaoApp(state, db); // 启动“墨巢”App的事件监听和初始
         <div class="custom-modal-footer">
             <button id="tts-cache-clear-cancel-btn">取消</button>
             <button id="tts-cache-clear-confirm-btn" class="confirm-btn btn-danger">确认清理</button>
+        </div>
+    </div>
+</div>
+<!-- ▲▲▲ 新增HTML结束 ▲▲▲ -->
+<!-- ▼▼▼ 【全新】语音文件管理浮动窗口 ▼▼▼ -->
+<div id="voice-manager-modal" class="modal">
+    <div class="modal-content" style="height: 75%; width: 340px;">
+        <div class="modal-header">
+            <!-- 1. 页签 -->
+            <div class="frame-tabs" style="width: 100%;">
+                <div id="voice-tab-cache" class="frame-tab active">当前角色缓存</div>
+                <div id="voice-tab-favorites" class="frame-tab">收藏</div>
+            </div>
+        </div>
+        <div class="modal-body" style="padding: 0; display: flex; flex-direction: column;">
+            <!-- 2. 缓存页面 -->
+            <div id="voice-cache-view" class="list-container" style="display: block;">
+                <div id="voice-cache-list" style="overflow-y: auto; height: 100%;"></div>
+            </div>
+            <!-- 3. 收藏页面 -->
+            <div id="voice-favorites-view" class="list-container" style="display: none;">
+                <div id="voice-favorites-list" style="overflow-y: auto; height: 100%;"></div>
+            </div>
+        </div>
+        <!-- 4. 动态切换的页脚 -->
+        <div id="voice-cache-footer" class="modal-footer">
+            <button class="cancel" id="fav-all-cache-btn">全部收藏</button>
+            <button class="save btn-danger" id="clear-all-cache-btn">一键清除</button>
+        </div>
+        <div id="voice-favorites-footer" class="modal-footer" style="display: none;">
+            <button class="cancel" id="unfav-all-btn">全部取消</button>
+            <button class="save" id="add-all-to-playlist-btn">加入列表</button>
+        </div>
+        <!-- 5. 统一的关闭按钮 -->
+        <div class="modal-footer">
+            <button class="cancel" id="close-voice-manager-btn" style="width: 100%; background-color: #f0f0f0; color: var(--text-primary);">关闭</button>
         </div>
     </div>
 </div>
